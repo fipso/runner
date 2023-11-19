@@ -4,9 +4,9 @@ import (
 	"context"
 	"log"
 	"net"
+	"path/filepath"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
@@ -27,7 +27,7 @@ func connectDocker() {
 }
 
 func dockerRun(
-	name, image, cmd, env, port string,
+	name, image, cmd string, env *string, port string,
 	hostPort *string,
 	mountPath string,
 ) (string, error) {
@@ -35,8 +35,6 @@ func dockerRun(
 	if cmd != "" {
 		cmdParts = strings.Split(cmd, " ")
 	}
-
-	spew.Dump(name, image, cmd, env, port, hostPort, mountPath)
 
 	reader, err := docker.ImagePull(
 		context.Background(),
@@ -55,12 +53,17 @@ func dockerRun(
 	log.Println(pullLogContent)
 
 	containerConfig := container.Config{
-		Image:    image,
-		Cmd:      cmdParts,
-		Tty:      true,
-		Env:      strings.Split(env, "\n"),
-		Hostname: name,
+		Image:      image,
+		Entrypoint: cmdParts,
+		Tty:        true,
+		Hostname:   name,
 	}
+
+	if env != nil {
+		containerConfig.Env = strings.Split(*env, "\n")
+	}
+
+	mountPathAbs, err := filepath.Abs(mountPath)
 
 	hostConfig := container.HostConfig{
 		// Resources: container.Resources{
@@ -70,8 +73,9 @@ func dockerRun(
 		// },
 		Mounts: []mount.Mount{
 			{
-				Source: mountPath,
-				Target: "/",
+				Type:   mount.TypeBind,
+				Source: mountPathAbs,
+				Target: "/runner",
 			},
 		},
 	}

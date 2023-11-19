@@ -38,7 +38,7 @@ var deploymentTemplates map[string]TemplateConfig
 func main() {
 	loadTemplates()
 
-        connectDocker()
+	connectDocker()
 
 	log.Fatal(runApp("example", "./example/", ""))
 }
@@ -67,14 +67,16 @@ func runApp(name, srcPath, env string) error {
 		return err
 	}
 
-	tmpDir, err := os.MkdirTemp("./mounts", "")
+	buildDir, err := os.MkdirTemp("./mounts", "")
 	if err != nil {
 		return err
 	}
-	log.Println("Mount:", tmpDir)
+	// defer os.RemoveAll(tmpDir)
+
+	log.Println("Mount:", buildDir)
 
 	// Copy source code into container
-	err = cp.Copy(srcPath, tmpDir)
+	err = cp.Copy(srcPath, buildDir)
 	if err != nil {
 		return err
 	}
@@ -85,25 +87,24 @@ func runApp(name, srcPath, env string) error {
 		beforeScript = *template.Build.BeforeScript
 	}
 	buildScript := fmt.Sprintf(
-		"#!/bin/bash\n#Before Script:\n%s\n#Run Command:\n%s",
+		"#!/bin/bash -v\ncd /runner/\n#Before Script:\n%s\n#Run Command:\n%s",
 		beforeScript,
 		template.Build.Cmd,
 	)
-	buildDir := path.Join(tmpDir, "build")
-	err = os.Mkdir(buildDir, 0755)
-	if err != nil {
-		return err
-	}
-	err = os.WriteFile(path.Join(buildDir, "runner_build.sh"), []byte(buildScript), 0755)
+	// err = os.Mkdir(buildDir, 0755)
+	// if err != nil {
+	// 	return err
+	// }
+	err = os.WriteFile(path.Join(buildDir, "r_build.sh"), []byte(buildScript), 0755)
 
 	_, err = dockerRun(
 		name,
 		template.Build.Image,
-		"/build/runner_build.sh",
-		env,
+		"/bin/ash /runner/r_build.sh",
+		nil,
 		strconv.Itoa(port),
 		nil,
-		tmpDir,
+		buildDir,
 	)
 	if err != nil {
 		return err

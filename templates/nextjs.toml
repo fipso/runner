@@ -3,7 +3,7 @@ match_dependencies = ["next"]
 
 [build]
 image = "node:lts-alpine3.17"
-cmd = "NODE_ENV=production corepack build"
+cmd = "NODE_ENV=production corepack pnpm install --frozen-lockfile && corepack pnpm run build"
 artifact = ".next"
 
 [run]
