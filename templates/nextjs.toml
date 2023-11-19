@@ -1,0 +1,21 @@
+name = "NextJS"
+match_dependencies = ["next"]
+
+[build]
+image = "node:lts-alpine3.17"
+cmd = "NODE_ENV=production corepack build"
+artifact = ".next"
+
+[run]
+image = "node:lts-alpine3.17"
+before_script = """
+# Setup NextJS standalone (+ static files) environment
+
+ln -s .next/static .next/standalone/.next/static
+ln -s .next/public .next/standalone/public
+cd .next/standalone
+
+export NODE_ENV=production
+"""
+cmd = "node server.js"
+port = 3000
