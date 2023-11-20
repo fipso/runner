@@ -21,4 +21,6 @@
 go.work
 
 example
+artifacts
+
 mounts

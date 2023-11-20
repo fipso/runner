@@ -98,3 +98,11 @@ func getFreePort() (port int, err error) {
 	}
 	return
 }
+
+func createDirIfNotExists(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return os.Mkdir(path, 755)
+	}
+
+	return nil
+}

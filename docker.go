@@ -27,8 +27,7 @@ func connectDocker() {
 }
 
 func dockerRun(
-	name, image, cmd string, env *string, port string,
-	hostPort *string,
+	image, cmd string, env, port, hostPort *string,
 	mountPath string,
 ) (string, error) {
 	var cmdParts []string
@@ -53,10 +52,9 @@ func dockerRun(
 	log.Println(pullLogContent)
 
 	containerConfig := container.Config{
-		Image:      image,
-		Entrypoint: cmdParts,
-		Tty:        true,
-		Hostname:   name,
+		Image: image,
+		Cmd:   cmdParts,
+		Tty:   true,
 	}
 
 	if env != nil {
@@ -80,9 +78,12 @@ func dockerRun(
 		},
 	}
 
-	if hostPort != nil {
+	if port != nil && hostPort != nil {
+		containerConfig.ExposedPorts = nat.PortSet{
+			nat.Port(*port): struct{}{},
+		}
 		hostConfig.PortBindings = nat.PortMap{
-			nat.Port(port): []nat.PortBinding{
+			nat.Port(*port): []nat.PortBinding{
 				{
 					HostIP:   "127.0.0.1",
 					HostPort: *hostPort,
@@ -104,7 +105,7 @@ func dockerRun(
 		return "", err
 	}
 
-	log.Println("New container", name, resp.ID)
+	log.Println("New container", resp.ID)
 
 	// Start container
 	err = docker.ContainerStart(context.Background(), resp.ID, types.ContainerStartOptions{})
