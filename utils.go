@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/samber/lo"
 )
 
 func ptr[T any](v T) *T {
@@ -105,4 +106,14 @@ func createDirIfNotExists(path string) error {
 	}
 
 	return nil
+}
+
+func getAppByDomain(domain string) *App {
+	app, found := lo.Find(deployments, func(app App) bool {
+		return app.GetDomain() == domain
+	})
+	if !found {
+		return nil
+	}
+	return &app
 }

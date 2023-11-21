@@ -6,8 +6,10 @@ image = "node:lts-alpine3.17"
 before_script = """
 echo "Installing dependencies..."
 corepack pnpm install
+
+export NODE_ENV=production 
 """
-cmd = "NODE_ENV=production corepack pnpm run build"
+cmd = "corepack pnpm run build"
 after_script = "cp -r ./public ./.next/standalone/public"
 artifact = ".next/"
 

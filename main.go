@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -9,7 +11,11 @@ import (
 	"strconv"
 
 	"github.com/docker/docker/api/types"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/proxy"
 	cp "github.com/otiai10/copy"
+	"github.com/valyala/fasthttp"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 type TemplateConfig struct {
@@ -36,9 +42,47 @@ type StepRun struct {
 	Port string `toml:"port"`
 }
 
+type App struct {
+	Id          string `json:"id"`
+	Name        string `json:"name"`
+	ContainerId string `json:"container_id"`
+	Port        string `json:"port"`
+}
+
+func (a App) GetDomain() string {
+	return fmt.Sprintf("%s.%s", a.Name, domain)
+}
+
+func (a App) GetUrl() string {
+	s := ""
+	if ssl {
+		s = "s"
+	}
+	return fmt.Sprintf("http%s://%s.%s", s, a.Name, domain)
+}
+
+// Globals
 var deploymentTemplates map[string]TemplateConfig
+var deployments []App
+
+// CLI Flags
+var domain string
+var ssl bool
+var debug bool
+var port string
+var sslPort string
 
 func main() {
+	// Handle CLI
+	flag.StringVar(&domain, "domain", "", "Base domain for all deployments and UI")
+	flag.BoolVar(&ssl, "ssl", false, "Enable SSL")
+	flag.BoolVar(&debug, "debug", false, "Enable debug mode")
+	flag.StringVar(&port, "port", "80", "Port for HTTP")
+	flag.StringVar(&sslPort, "ssl-port", "443", "Port for HTTPS")
+
+	flag.Parse()
+
+	// Init
 	loadTemplates()
 	connectDocker()
 
@@ -56,7 +100,59 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_, templateId, artifactDir, err := buildApp("./example/", "")
+	// Initialize web server
+	proxy.WithClient(&fasthttp.Client{
+		NoDefaultUserAgentHeader: true,
+		DisablePathNormalizing:   true,
+	})
+
+	app := fiber.New()
+	app.Get("/", func(c *fiber.Ctx) error {
+		app := getAppByDomain(c.Hostname())
+		if app == nil {
+			return fiber.NewError(fiber.StatusNotFound, "App not found")
+		}
+
+		return proxy.Do(c, fmt.Sprintf("http://127.0.0.1:%s", app.Port))
+	})
+
+	if ssl {
+		// Certificate manager
+		m := &autocert.Manager{
+			Prompt: autocert.AcceptTOS,
+			// Replace with your domain
+			HostPolicy: autocert.HostWhitelist(fmt.Sprintf("*.%s", domain)),
+			// Folder to store the certificates
+			Cache: autocert.DirCache("./certs"),
+		}
+
+		// TLS Config
+		cfg := &tls.Config{
+			// Get Certificate from Let's Encrypt
+			GetCertificate: m.GetCertificate,
+			// By default NextProtos contains the "h2"
+			// This has to be removed since Fasthttp does not support HTTP/2
+			// Or it will cause a flood of PRI method logs
+			// http://webconcepts.info/concepts/http-method/PRI
+			NextProtos: []string{
+				"http/1.1", "acme-tls/1",
+			},
+		}
+		ln, err := tls.Listen("tcp", fmt.Sprintf(":%s", sslPort), cfg)
+		if err != nil {
+			panic(err)
+		}
+
+		// Start server
+		log.Fatal(app.Listener(ln))
+	} else {
+		log.Fatal(app.Listen(fmt.Sprintf(":%s", port)))
+	}
+
+}
+
+func deployApp(path string, env string) {
+	_, templateId, artifactDir, err := buildApp(path, env)
 	if err != nil {
 		log.Fatal(err)
 	}
