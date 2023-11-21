@@ -54,7 +54,7 @@ func dockerRun(
 	containerConfig := container.Config{
 		Image: image,
 		Cmd:   cmdParts,
-		Tty:   true,
+		Tty:   false,
 	}
 
 	if env != nil {

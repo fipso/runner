@@ -23,6 +23,7 @@ type BuildStep struct {
 	Image        string  `toml:"image"`
 	Cmd          string  `toml:"cmd"`
 	BeforeScript *string `toml:"before_script,omitempty"`
+	AfterScript  *string `toml:"after_script,omitempty"`
 }
 
 type StepBuild struct {
@@ -107,10 +108,16 @@ func buildApp(
 	if template.Build.BeforeScript != nil {
 		beforeScript = *template.Build.BeforeScript
 	}
+	afterScript := ""
+	if template.Build.AfterScript != nil {
+		afterScript = *template.Build.AfterScript
+	}
+
 	buildScript := fmt.Sprintf(
-		"#!/bin/sh\n\ncd /runner/\n\n#Before Script:\n%s\n#Run Command:\n%s",
+		"#!/bin/sh\n\ncd /runner/\n\n#Before Script:\n%s\n#Run Command:\n%s\n#After Script:\n%s",
 		beforeScript,
 		template.Build.Cmd,
+		afterScript,
 	)
 	err = os.WriteFile(path.Join(buildDir, "r_build.sh"), []byte(buildScript), 0755)
 
@@ -191,15 +198,21 @@ func runApp(templateId, artifactDir string) (containerId string, port int, err e
 		return
 	}
 
-	// Write build script into container
+	// Write run script into container
 	beforeScript := ""
 	if template.Run.BeforeScript != nil {
 		beforeScript = *template.Run.BeforeScript
 	}
+	afterScript := ""
+	if template.Run.AfterScript != nil {
+		afterScript = *template.Run.AfterScript
+	}
+
 	runScript := fmt.Sprintf(
-		"#!/bin/sh\n\ncd /runner/\n\n#Before Script:\n%s\n#Run Command:\n%s",
+		"#!/bin/sh\n\ncd /runner/\n\n#Before Script:\n%s\n#Run Command:\n%s\n#After Script:\n%s",
 		beforeScript,
 		template.Run.Cmd,
+		afterScript,
 	)
 	err = os.WriteFile(path.Join(workDir, "r_run.sh"), []byte(runScript), 0755)
 

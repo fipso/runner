@@ -4,12 +4,11 @@ match_dependencies = ["next"]
 [build]
 image = "node:lts-alpine3.17"
 before_script = """
-export NODE_ENV=production
-
 echo "Installing dependencies..."
-corepack npm install
+corepack pnpm install
 """
-cmd = "corepack pnpm run build"
+cmd = "NODE_ENV=production corepack pnpm run build"
+after_script = "cp -r ./public ./.next/standalone/public"
 artifact = ".next/"
 
 [run]
@@ -18,7 +17,6 @@ before_script = """
 # Setup NextJS standalone (+ static files) environment
 
 ln -s /runner/.next/static /runner/.next/standalone/.next/static
-ln -s /runner/.next/public /runner/.next/standalone/public
 cd .next/standalone
 
 export NODE_ENV=production
