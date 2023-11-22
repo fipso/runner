@@ -10,6 +10,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	cp "github.com/otiai10/copy"
 )
 
@@ -23,8 +24,8 @@ type App struct {
 	Env              *string `json:"env"`
 	Status           string  `json:"status"`
 	GitUrl           string  `json:"git_url"`
-	GitUsername      string  `json:"git_username"`
-	GitPassword      string  `json:"git_password"`
+	GitUsername      *string `json:"git_username"`
+	GitPassword      *string `json:"git_password"`
 	RepoPath         *string `json:"src_path"`
 	TemplateId       *string `json:"template_id"`
 }
@@ -217,7 +218,16 @@ func (a *App) cloneRepo() error {
 	}
 	a.RepoPath = ptr(tmpDir)
 
-	_, err = git.PlainClone(*a.RepoPath, false, &git.CloneOptions{})
+	options := git.CloneOptions{
+		URL: a.GitUrl,
+	}
+	if a.GitUsername != nil && a.GitPassword != nil {
+		options.Auth = &http.BasicAuth{
+			Username: *a.GitUsername,
+			Password: *a.GitPassword,
+		}
+	}
+	_, err = git.PlainClone(*a.RepoPath, false, &options)
 	if err != nil {
 		return err
 	}

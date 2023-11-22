@@ -117,11 +117,11 @@ func main() {
 
 	app.Post("/api/deploy", func(c *fiber.Ctx) error {
 		var body struct {
-			ProjectName string `json:"project_name"`
-			GitUrl      string `json:"git_url"`
-			GitUsername string `json:"git_username"`
-			GitPassword string `json:"git_password"`
-			Env         string `json:"env"`
+			ProjectName string  `json:"project_name"`
+			GitUrl      string  `json:"git_url"`
+			GitUsername *string `json:"git_username,omitempty"`
+			GitPassword *string `json:"git_password,omitempty"`
+			Env         string  `json:"env"`
 		}
 
 		if err := c.BodyParser(&body); err != nil {
