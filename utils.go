@@ -108,9 +108,25 @@ func createDirIfNotExists(path string) error {
 	return nil
 }
 
-func getAppByDomain(domain string) *App {
-	app, found := lo.Find(deployments, func(app App) bool {
-		return app.GetDomain() == domain
+func getAllDeployments() []Deployment {
+	return lo.FlatMap(apps, func(app App, index int) []Deployment {
+		return app.Deployments
+	})
+}
+
+func getDeploymentByDomain(domain string) *Deployment {
+	deployment, found := lo.Find(getAllDeployments(), func(deployment Deployment) bool {
+		return deployment.GetDomain() == domain
+	})
+	if !found {
+		return nil
+	}
+	return &deployment
+}
+
+func getAppById(id string) *App {
+	app, found := lo.Find(apps, func(app App) bool {
+		return app.Id == id
 	})
 	if !found {
 		return nil

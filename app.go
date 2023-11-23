@@ -10,68 +10,102 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	cp "github.com/otiai10/copy"
 )
 
 type App struct {
-	Id               string  `json:"id"`
-	Name             string  `json:"name"`
-	ProjectName      string  `json:"project_name"`
-	ContainerId      *string `json:"container_id"`
-	BuildContainerId *string `json:"build_container_id"`
-	Port             *string `json:"port"`
-	Env              *string `json:"env"`
-	Status           string  `json:"status"`
-	GitUrl           string  `json:"git_url"`
-	GitUsername      *string `json:"git_username"`
-	GitPassword      *string `json:"git_password"`
-	RepoPath         *string `json:"src_path"`
-	TemplateId       *string `json:"template_id"`
+	Id          string       `json:"id"`
+	Name        string       `json:"name"`
+	Port        *string      `json:"port"`
+	Env         *string      `json:"env"`
+	GitUrl      string       `json:"git_url"`
+	GitUsername *string      `json:"git_username"`
+	GitPassword *string      `json:"git_password"`
+	TemplateId  *string      `json:"template_id"`
+	Deployments []Deployment `json:"deployments"`
 }
 
-func (a App) GetSlug() string {
-	return fmt.Sprintf("%s-%s", a.ProjectName, a.Name)
+type Deployment struct {
+	Id          string  `json:"id"`
+	Name        string  `json:"name"`
+	ContainerId *string `json:"container_id"`
+	GitBranch   string  `json:"git_branch"`
+	GitCommit   string  `json:"git_commit"`
+	Status      string  `json:"status"`
+	BuildJob    *BuildJob
+	Port        *string
+	App         *App
 }
 
-func (a App) GetDomain() string {
-	return fmt.Sprintf("%s.%s", a.GetSlug(), domain)
+type BuildJob struct {
+	Id            string  `json:"id"`
+	ContainerId   *string `json:"container_id"`
+	Status        string  `json:"status"`
+	ArtifactsPath string  `json:"artifacts_path"`
+	Deployment    *Deployment
 }
 
-func (a App) GetUrl() string {
+func (d Deployment) GetSlug() string {
+	return fmt.Sprintf("%s-%s", d.App.Name, d.Name)
+}
+
+func (d Deployment) GetDomain() string {
+	return fmt.Sprintf("%s.%s", d.GetSlug(), domain)
+}
+
+func (d Deployment) GetUrl() string {
 	s := ""
 	if ssl {
 		s = "s"
 	}
-	return fmt.Sprintf("http%s://%s", s, a.GetDomain())
+	return fmt.Sprintf("http%s://%s", s, d.GetDomain())
 }
 
-func (a *App) Deploy() error {
-	templateId, err := a.suggestBuildTemplate(*a.RepoPath)
-	if err != nil {
-		return err
-	}
-	a.TemplateId = ptr(templateId)
-
-	err = a.cloneRepo()
-	if err != nil {
-		return err
-	}
-
-	artifactDir, err := a.Build()
-	if err != nil {
-		return err
+func (a *App) Deploy(gitBranch, gitCommit string) (deployment *Deployment, err error) {
+	// templateId, err := a.suggestBuildTemplate(*a.RepoPath)
+	// if err != nil {
+	// 	return err
+	// }
+	// a.TemplateId = ptr(templateId)
+	deployment = &Deployment{
+		App:       a,
+		GitBranch: gitBranch,
+		GitCommit: gitCommit,
+		Status:    "Intializing Build",
 	}
 
-	err = a.Run(artifactDir)
+	buildJob := BuildJob{
+		Deployment: deployment,
+		Status:     "Building",
+	}
+	deployment.BuildJob = &buildJob
+
+	err = buildJob.Run()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	err = deployment.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	return
 }
 
-func (a *App) Build() (artifactDir string, err error) {
+func (b *BuildJob) Run() (err error) {
+	// Update build job status
+	defer func() {
+		if err != nil {
+			b.Status = "Failed"
+		} else {
+			b.Status = "Success"
+		}
+	}()
+
 	// Create tmp mount dir
 	buildDir, err := os.MkdirTemp("./mounts/build", "")
 	if err != nil {
@@ -79,13 +113,13 @@ func (a *App) Build() (artifactDir string, err error) {
 	}
 	defer os.RemoveAll(buildDir)
 
-	// Copy source code into container
-	err = cp.Copy(*a.RepoPath, buildDir)
+	// Clone src into buildDir
+	err = b.cloneRepo(buildDir)
 	if err != nil {
 		return
 	}
 
-	template := deploymentTemplates[*a.TemplateId]
+	template := deploymentTemplates[*b.Deployment.App.TemplateId]
 
 	// Write build script into container
 	beforeScript := ""
@@ -117,7 +151,7 @@ func (a *App) Build() (artifactDir string, err error) {
 	if err != nil {
 		return
 	}
-	a.BuildContainerId = ptr(containerId)
+	b.ContainerId = ptr(containerId)
 
 	// Watch container
 	eChan, errChan := docker.Events(context.Background(), types.EventsOptions{})
@@ -138,7 +172,7 @@ LOOP:
 	}
 
 	// Save artifact
-	artifactDir, err = os.MkdirTemp("./artifacts", "")
+	artifactDir, err := os.MkdirTemp("./artifacts", "")
 	if err != nil {
 		return
 	}
@@ -151,18 +185,20 @@ LOOP:
 		return
 	}
 
+	b.ArtifactsPath = artifactDir
+
 	return
 }
 
-func (a *App) Run(artifactDir string) (err error) {
-	template := deploymentTemplates[*a.TemplateId]
+func (d *Deployment) Run() (err error) {
+	template := deploymentTemplates[*d.App.TemplateId]
 
 	// Select random host port for container
 	port, err := getFreePort()
 	if err != nil {
 		return
 	}
-	a.Port = ptr(strconv.Itoa(port))
+	d.Port = ptr(strconv.Itoa(port))
 
 	// Create tmp mount dir
 	workDir, err := os.MkdirTemp("./mounts/running", "")
@@ -171,7 +207,7 @@ func (a *App) Run(artifactDir string) (err error) {
 	}
 
 	// Copy artifacts into workDir
-	err = cp.Copy(artifactDir, workDir)
+	err = cp.Copy(d.BuildJob.ArtifactsPath, workDir)
 	if err != nil {
 		return
 	}
@@ -206,30 +242,59 @@ func (a *App) Run(artifactDir string) (err error) {
 	if err != nil {
 		return
 	}
-	a.ContainerId = ptr(containerId)
+	d.ContainerId = ptr(containerId)
 
 	return
 }
 
-func (a *App) cloneRepo() error {
-	tmpDir, err := os.MkdirTemp("./repos", "")
-	if err != nil {
-		return err
-	}
-	a.RepoPath = ptr(tmpDir)
+func (b *BuildJob) cloneRepo(path string) error {
+	branchRef := plumbing.ReferenceName(
+		fmt.Sprintf("refs/heads/%s", b.Deployment.GitBranch),
+	)
 
 	options := git.CloneOptions{
-		URL: a.GitUrl,
+		URL:           b.Deployment.App.GitUrl,
+		SingleBranch:  true,
+		ReferenceName: branchRef,
 	}
-	if a.GitUsername != nil && a.GitPassword != nil {
+	if b.Deployment.App.GitUsername != nil && b.Deployment.App.GitPassword != nil {
 		options.Auth = &http.BasicAuth{
-			Username: *a.GitUsername,
-			Password: *a.GitPassword,
+			Username: *b.Deployment.App.GitUsername,
+			Password: *b.Deployment.App.GitPassword,
 		}
 	}
-	_, err = git.PlainClone(*a.RepoPath, false, &options)
+	repo, err := git.PlainClone(path, false, &options)
 	if err != nil {
 		return err
+	}
+
+	head, err := repo.Head()
+	if err != nil {
+		return err
+	}
+
+	if head.Hash().String() != b.Deployment.GitCommit {
+		w, err := repo.Worktree()
+		if err != nil {
+			return err
+		}
+
+		err = repo.Fetch(&git.FetchOptions{
+			RefSpecs: []config.RefSpec{"refs/*:refs/*", "HEAD:refs/heads/HEAD"},
+		})
+		if err != nil {
+			return err
+		}
+
+		err = w.Checkout(&git.CheckoutOptions{
+			Branch: branchRef,
+			Hash:   plumbing.NewHash(b.Deployment.GitCommit),
+			Force:  true,
+		})
+		if err != nil {
+			return err
+		}
+
 	}
 
 	return nil

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -39,7 +40,7 @@ type StepRun struct {
 
 // Globals
 var deploymentTemplates map[string]TemplateConfig
-var deployments []App
+var apps []App
 
 // CLI Flags
 var domain string
@@ -102,12 +103,12 @@ func main() {
 		}
 
 		// Forward to docker container
-		app := getAppByDomain(c.Hostname())
-		if app == nil {
-			return fiber.NewError(fiber.StatusNotFound, "App not found")
+		deployment := getDeploymentByDomain(c.Hostname())
+		if deployment == nil {
+			return fiber.NewError(fiber.StatusNotFound, "Deployment not found")
 		}
 
-		err := proxy.Do(c, fmt.Sprintf("http://127.0.0.1:%s", *app.Port))
+		err := proxy.Do(c, fmt.Sprintf("http://127.0.0.1:%s", *deployment.Port))
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
@@ -115,9 +116,10 @@ func main() {
 		return c.Next()
 	})
 
-	app.Post("/api/deploy", func(c *fiber.Ctx) error {
+	app.Post("/api/app", func(c *fiber.Ctx) error {
 		var body struct {
-			ProjectName string  `json:"project_name"`
+			Name        string  `json:"name"`
+			TemplateId  string  `json:"template_id"`
 			GitUrl      string  `json:"git_url"`
 			GitUsername *string `json:"git_username,omitempty"`
 			GitPassword *string `json:"git_password,omitempty"`
@@ -129,14 +131,44 @@ func main() {
 		}
 
 		app := App{
-			ProjectName: body.ProjectName,
+			Name:        body.Name,
+			TemplateId:  &body.TemplateId,
 			GitUrl:      body.GitUrl,
 			GitUsername: body.GitUsername,
 			GitPassword: body.GitPassword,
 			Env:         ptr(body.Env),
 		}
 
-		return app.Deploy()
+		return c.JSON(app)
+	})
+
+	app.Post("/api/app/:id/deploy", func(c *fiber.Ctx) error {
+		id := c.Params("id", "")
+		if id == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid app id")
+		}
+
+		var body struct {
+			Branch string `json:"branch"`
+			Commit string `json:"commit"`
+		}
+
+		err := json.Unmarshal(c.Body(), &body)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+
+		app := getAppById(id)
+		if app == nil {
+			return fiber.NewError(fiber.StatusBadRequest, "Unkown app id")
+		}
+
+		deployment, err := app.Deploy(body.Branch, body.Commit)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+
+		return c.JSON(deployment)
 	})
 
 	if ssl {
