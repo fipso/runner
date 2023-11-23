@@ -133,3 +133,7 @@ func getAppById(id string) *App {
 	}
 	return &app
 }
+
+func makeId() string {
+	return lo.RandomString(12, lo.LettersCharset)
+}

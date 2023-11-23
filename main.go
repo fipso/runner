@@ -131,6 +131,7 @@ func main() {
 		}
 
 		app := App{
+			Id:          makeId(),
 			Name:        body.Name,
 			TemplateId:  &body.TemplateId,
 			GitUrl:      body.GitUrl,
@@ -138,6 +139,8 @@ func main() {
 			GitPassword: body.GitPassword,
 			Env:         ptr(body.Env),
 		}
+
+		apps = append(apps, app)
 
 		return c.JSON(app)
 	})

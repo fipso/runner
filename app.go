@@ -10,8 +10,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	cp "github.com/otiai10/copy"
 )
@@ -29,23 +29,23 @@ type App struct {
 }
 
 type Deployment struct {
-	Id          string  `json:"id"`
-	Name        string  `json:"name"`
-	ContainerId *string `json:"container_id"`
-	GitBranch   string  `json:"git_branch"`
-	GitCommit   string  `json:"git_commit"`
-	Status      string  `json:"status"`
-	BuildJob    *BuildJob
-	Port        *string
-	App         *App
+	Id          string    `json:"id"`
+	Name        string    `json:"name"`
+	ContainerId *string   `json:"container_id"`
+	GitBranch   string    `json:"git_branch"`
+	GitCommit   string    `json:"git_commit"`
+	Status      string    `json:"status"`
+	Port        *string   `json:"port"`
+	BuildJob    *BuildJob `json:"-"`
+	App         *App      `json:"-"`
 }
 
 type BuildJob struct {
-	Id            string  `json:"id"`
-	ContainerId   *string `json:"container_id"`
-	Status        string  `json:"status"`
-	ArtifactsPath string  `json:"artifacts_path"`
-	Deployment    *Deployment
+	Id            string      `json:"id"`
+	ContainerId   *string     `json:"container_id"`
+	Status        string      `json:"status"`
+	ArtifactsPath string      `json:"artifacts_path"`
+	Deployment    *Deployment `json:"-"`
 }
 
 func (d Deployment) GetSlug() string {
@@ -71,6 +71,7 @@ func (a *App) Deploy(gitBranch, gitCommit string) (deployment *Deployment, err e
 	// }
 	// a.TemplateId = ptr(templateId)
 	deployment = &Deployment{
+		Id:        makeId(),
 		App:       a,
 		GitBranch: gitBranch,
 		GitCommit: gitCommit,
@@ -78,6 +79,7 @@ func (a *App) Deploy(gitBranch, gitCommit string) (deployment *Deployment, err e
 	}
 
 	buildJob := BuildJob{
+		Id:         makeId(),
 		Deployment: deployment,
 		Status:     "Building",
 	}
@@ -87,6 +89,8 @@ func (a *App) Deploy(gitBranch, gitCommit string) (deployment *Deployment, err e
 	if err != nil {
 		return nil, err
 	}
+
+	deployment.Status = fmt.Sprintf("Build: %s", buildJob.Status)
 
 	err = deployment.Run()
 	if err != nil {
@@ -191,6 +195,15 @@ LOOP:
 }
 
 func (d *Deployment) Run() (err error) {
+	// Update build job status
+	defer func() {
+		if err != nil {
+			d.Status = "Failed"
+		} else {
+			d.Status = "Success"
+		}
+	}()
+
 	template := deploymentTemplates[*d.App.TemplateId]
 
 	// Select random host port for container
