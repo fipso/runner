@@ -3,6 +3,7 @@ import { onMounted, ref } from "vue";
 import NewAppModal from "./components/NewAppModal.vue";
 import DeployCommitModal from "./components/DeployCommitModal.vue";
 
+const info = ref({});
 const apps = ref<any>([]);
 
 const newAppModalRef = ref<InstanceType<typeof NewAppModal> | null>(null);
@@ -11,6 +12,9 @@ const deployCommitModalRef = ref<InstanceType<typeof DeployCommitModal> | null>(
 );
 
 onMounted(async () => {
+  const infoReq = await fetch("/runner/api/info");
+  info.value = await infoReq.json();
+
   const appsReq = await fetch("/runner/api/app");
   apps.value = await appsReq.json();
 });
@@ -23,7 +27,7 @@ onMounted(async () => {
     <!-- Top Row -->
     <div class="row m-3">
       <h1 class="col-2">Apps</h1>
-      <button class="btn btn-success col-2 offset-8" type="button" @click="newAppModalRef?.show()">
+      <button class="btn fs-4 btn-primary col-2 offset-8" type="button" @click="newAppModalRef?.show()">
         Add New App
       </button>
     </div>
@@ -40,15 +44,18 @@ onMounted(async () => {
         </p>
         <p class="card-text"></p>
         <!-- Deployments List -->
-        <ul class="list-group">
-          <li class="list-group-item mb-3" v-for="deployment in app.deployments">
-            <div class="d-flex justify-content-between">
+        <ul class="list-group mb-3">
+          <li class="list-group-item" v-for="deployment in app.deployments">
+            <div class="d-flex justify-content-between align-items-center">
               <strong>{{ deployment.git_branch }}/{{ deployment.git_commit }}</strong>
-              <span class="badge bg-success text-light">{{
+              <span class="badge fs-6 bg-success text-light">{{
                 deployment.status
               }}</span>
             </div>
-            <p>Public URL:</p>
+            <p>
+              Public URL:
+              <a :href="deployment.url" target="_blank">{{ deployment.url }}</a>
+            </p>
           </li>
         </ul>
 

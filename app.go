@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -49,7 +50,7 @@ type BuildJob struct {
 }
 
 func (d Deployment) GetSlug() string {
-	return fmt.Sprintf("%s-%s", d.App.Name, d.Name)
+	return fmt.Sprintf("%s-%s-%s", d.App.Name, d.GitBranch, d.GitCommit)
 }
 
 func (d Deployment) GetDomain() string {
@@ -58,10 +59,31 @@ func (d Deployment) GetDomain() string {
 
 func (d Deployment) GetUrl() string {
 	s := ""
+	p := ""
 	if ssl {
 		s = "s"
+		if sslPort != "443" {
+			p = fmt.Sprintf(":%s", sslPort)
+		}
+	} else {
+		if port != "80" {
+			p = fmt.Sprintf(":%s", port)
+		}
+
 	}
-	return fmt.Sprintf("http%s://%s", s, d.GetDomain())
+	return fmt.Sprintf("http%s://%s%s", s, d.GetDomain(), p)
+}
+
+func (d *Deployment) MarshalJSON() ([]byte, error) {
+	type Alias Deployment
+
+	return json.Marshal(struct {
+		*Alias
+		Url string `json:"url"`
+	}{
+		Alias: (*Alias)(d),
+		Url:   d.GetUrl(),
+	})
 }
 
 func (a *App) Deploy(gitBranch, gitCommit string) (deployment *Deployment, err error) {
@@ -97,7 +119,7 @@ func (a *App) Deploy(gitBranch, gitCommit string) (deployment *Deployment, err e
 		return nil, err
 	}
 
-        a.Deployments = append(a.Deployments, *deployment)
+	a.Deployments = append(a.Deployments, *deployment)
 
 	return
 }

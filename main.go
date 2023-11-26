@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
@@ -102,7 +103,7 @@ func main() {
 		}
 
 		// Forward to docker container
-		deployment := getDeploymentByDomain(c.Hostname())
+		deployment := getDeploymentByDomain(strings.Split(c.Hostname(), ":")[0]) // Remove port
 		if deployment == nil {
 			return fiber.NewError(fiber.StatusNotFound, "Deployment not found")
 		}
@@ -113,6 +114,16 @@ func main() {
 		}
 
 		return c.Next()
+	})
+
+	app.Get("/runner/api/info", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"domain":  domain,
+			"ssl":     ssl,
+			"debug":   debug,
+			"port":    port,
+			"sslPort": sslPort,
+		})
 	})
 
 	app.Get("/runner/api/app", func(c *fiber.Ctx) error {
