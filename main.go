@@ -98,7 +98,7 @@ func main() {
 
 	app.Use(func(c *fiber.Ctx) error {
 		// Skip API routes
-		if bytes.HasPrefix(c.Request().URI().Path(), []byte("/api")) {
+		if bytes.HasPrefix(c.Request().URI().Path(), []byte("/runner/api")) {
 			return c.Next()
 		}
 
@@ -116,7 +116,25 @@ func main() {
 		return c.Next()
 	})
 
-	app.Post("/api/app", func(c *fiber.Ctx) error {
+	app.Get("/runner/api/app", func(c *fiber.Ctx) error {
+		return c.JSON(apps)
+	})
+
+	app.Get("/runner/api/app/:id", func(c *fiber.Ctx) error {
+		id := c.Params("id", "")
+		if id == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid app id")
+		}
+
+		app := getAppById(id)
+		if app == nil {
+			return fiber.NewError(fiber.StatusBadRequest, "Unkown app id")
+		}
+
+		return c.JSON(app)
+	})
+
+	app.Post("/runner/api/app", func(c *fiber.Ctx) error {
 		var body struct {
 			Name        string  `json:"name"`
 			TemplateId  string  `json:"template_id"`
@@ -145,7 +163,7 @@ func main() {
 		return c.JSON(app)
 	})
 
-	app.Post("/api/app/:id/deploy", func(c *fiber.Ctx) error {
+	app.Post("/runner/api/app/:id/deploy", func(c *fiber.Ctx) error {
 		id := c.Params("id", "")
 		if id == "" {
 			return fiber.NewError(fiber.StatusBadRequest, "Invalid app id")
