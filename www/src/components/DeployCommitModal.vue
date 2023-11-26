@@ -1,37 +1,66 @@
 <script lang="ts" setup>
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
+import { Modal } from "bootstrap";
 
-const props = defineProps(["appId"]);
-
+const appId = ref<string>("");
 const branch = ref<string>("");
 const commit = ref<string>("");
 
-const onSubmit = () => {
+const loading = ref(false);
+const modalRef = ref<HTMLElement | null>();
+const modal = ref<Modal | null>();
+
+onMounted(() => {
+  modal.value = new Modal(modalRef.value as Element, {});
+});
+
+const show = (id: string) => {
+  appId.value = id;
+  modal.value?.show();
+};
+defineExpose({
+  show,
+});
+
+const hide = () => {
+  modal.value?.hide();
+};
+
+const onSubmit = async () => {
   if (!branch.value || !commit.value) {
     alert("Please fill out all required fields");
     return;
   }
 
-  fetch(`/runner/api/app/${props.appId}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      branch: branch.value,
-      commit: commit.value,
-    }),
-  });
+  try {
+    loading.value = true;
+    await fetch(`/runner/api/app/${appId.value}/deploy`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        branch: branch.value,
+        commit: commit.value,
+      }),
+    });
+    loading.value = false;
+  } catch (err) {
+    alert(err);
+    console.log(err);
+  }
+
+  hide();
 };
 </script>
 
 <template>
-  <div id="deployCommitModal" class="modal" tabindex="-1">
+  <div ref="modalRef" class="modal" tabindex="-1">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Add new App</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title">Deploy commit</h5>
+          <button type="button" class="btn-close" @click="hide"></button>
         </div>
         <div class="modal-body">
           <form>
@@ -46,12 +75,13 @@ const onSubmit = () => {
           </form>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <button type="button" class="btn btn-secondary" @click="hide">
             Close
           </button>
-          <button @click="onSubmit" type="button" class="btn btn-primary" data-bs-dismiss="modal">
+          <button v-if="!loading" @click="onSubmit" type="button" class="btn btn-primary">
             Deploy
           </button>
+          <button v-else type="button" class="btn btn-primary" disabled>Deploying...</button>
         </div>
       </div>
     </div>

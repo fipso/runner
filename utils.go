@@ -125,13 +125,13 @@ func getDeploymentByDomain(domain string) *Deployment {
 }
 
 func getAppById(id string) *App {
-	app, found := lo.Find(apps, func(app App) bool {
+	_, i, found := lo.FindIndexOf(apps, func(app App) bool {
 		return app.Id == id
 	})
 	if !found {
 		return nil
 	}
-	return &app
+	return &apps[i]
 }
 
 func makeId() string {

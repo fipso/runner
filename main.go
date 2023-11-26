@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -148,6 +147,10 @@ func main() {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 
+		if body.Name == "" || body.TemplateId == "" || body.GitUrl == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "Missing required fields")
+		}
+
 		app := App{
 			Id:          makeId(),
 			Name:        body.Name,
@@ -174,9 +177,12 @@ func main() {
 			Commit string `json:"commit"`
 		}
 
-		err := json.Unmarshal(c.Body(), &body)
-		if err != nil {
+		if err := c.BodyParser(&body); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+
+		if body.Branch == "" || body.Commit == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "Missing required fields")
 		}
 
 		app := getAppById(id)

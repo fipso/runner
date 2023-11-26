@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
+import { Modal } from "bootstrap";
 
 const appName = ref<string>("");
 const appTemplate = ref<string>("");
@@ -8,36 +9,65 @@ const appGitUsername = ref<string>("");
 const appGitPassword = ref<string>("");
 const appEnv = ref<string>("");
 
-const onSubmit = () => {
+const loading = ref(false);
+const modalRef = ref<HTMLElement | null>();
+const modal = ref<Modal | null>();
+
+onMounted(() => {
+  modal.value = new Modal(modalRef.value as Element, {});
+});
+
+const show = () => {
+  modal.value?.show();
+};
+defineExpose({
+  show,
+});
+
+const hide = () => {
+  modal.value?.hide();
+};
+
+const onSubmit = async () => {
   if (!appName.value || !appTemplate.value || !appGitUrl.value) {
     alert("Please fill out all required fields");
     return;
   }
 
-  fetch("/runner/api/app", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name: appName.value,
-      template_id: appTemplate.value,
-      git_url: appGitUrl.value,
-      git_username: appGitUsername.value,
-      git_password: appGitPassword.value,
-      env: appEnv.value,
-    }),
-  });
+  try {
+    loading.value = true;
+    await fetch("/runner/api/app", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: appName.value,
+        template_id: appTemplate.value,
+        git_url: appGitUrl.value,
+        git_username: appGitUsername.value,
+        git_password: appGitPassword.value,
+        env: appEnv.value,
+      }),
+    });
+
+    hide();
+  } catch (err) {
+    console.log(err);
+    alert(err);
+  }
+
+  loading.value = false;
 };
 </script>
 
 <template>
-  <div id="newAppModal" class="modal" tabindex="-1">
+  <div ref="modalRef" class="modal" tabindex="-1">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Add new App</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" aria-label="Close" @click="hide"></button>
         </div>
         <div class="modal-body">
           <form>
@@ -73,11 +103,12 @@ const onSubmit = () => {
           </form>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-            Close
-          </button>
-          <button @click="onSubmit" type="button" class="btn btn-primary" data-bs-dismiss="modal">
+          <button type="button" class="btn btn-secondary" @click="hide">Close</button>
+          <button v-if="!loading" @click="onSubmit" type="button" class="btn btn-primary">
             Add App
+          </button>
+          <button v-else type="button" class="btn btn-primary" disabled>
+            Creating...
           </button>
         </div>
       </div>

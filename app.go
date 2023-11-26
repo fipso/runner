@@ -97,6 +97,8 @@ func (a *App) Deploy(gitBranch, gitCommit string) (deployment *Deployment, err e
 		return nil, err
 	}
 
+        a.Deployments = append(a.Deployments, *deployment)
+
 	return
 }
 
