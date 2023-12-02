@@ -134,6 +134,16 @@ func getAppById(id string) *App {
 	return &apps[i]
 }
 
+func getDeploymentById(id string) *Deployment {
+	deployment, found := lo.Find(getAllDeployments(), func(deployment Deployment) bool {
+		return deployment.Id == id
+	})
+	if !found {
+		return nil
+	}
+	return &deployment
+}
+
 func makeId() string {
 	return lo.RandomString(12, lo.LettersCharset)
 }

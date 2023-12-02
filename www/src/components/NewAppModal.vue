@@ -24,6 +24,8 @@ defineExpose({
   show,
 });
 
+const emit = defineEmits(["success"]);
+
 const hide = () => {
   modal.value?.hide();
 };
@@ -50,6 +52,8 @@ const onSubmit = async () => {
         env: appEnv.value,
       }),
     });
+
+    emit("success");
 
     hide();
   } catch (err) {
@@ -103,7 +107,9 @@ const onSubmit = async () => {
           </form>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" @click="hide">Close</button>
+          <button type="button" class="btn btn-secondary" @click="hide">
+            Close
+          </button>
           <button v-if="!loading" @click="onSubmit" type="button" class="btn btn-primary">
             Add App
           </button>

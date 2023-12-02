@@ -1,7 +1,7 @@
 # Runner
 Zero config vercel like preview deployments using docker
 
-Status: In early development. Only HTTP API works yet.
+Status: In early development. Deployment works kinda but WebUI is still very WIP
 
 ### Features
 - [ ] Data persistence
@@ -9,6 +9,7 @@ Status: In early development. Only HTTP API works yet.
 - Web UI
   - [ ] Connect with git providers via OAuth
   - [ ] Configure deployments
+  - [ ] Show build/runtime logs
 - Fast builds using docker
 - Comes with ready to use build templates:
   - [x] NextJS
@@ -17,6 +18,7 @@ Status: In early development. Only HTTP API works yet.
   - [ ] Static
 - [x] Templates are easy to modify using .toml files
 - [x] Automatic SSL using Let's Encrypt ACME
+- [ ] SSH directly into container
 
 ### Stuff we dont care about for now
 - Scalability

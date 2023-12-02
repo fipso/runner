@@ -1,9 +1,29 @@
-import { createApp } from 'vue'
+import { createApp } from "vue";
 
-import "bootstrap/dist/css/bootstrap.min.css"
-import "bootstrap"
+import * as VueRouter from "vue-router";
 
-import './style.css'
-import App from './App.vue'
+import "bootstrap/dist/css/bootstrap.min.css";
+import "bootstrap";
 
-createApp(App).mount('#app')
+import "./style.css";
+import App from "./App.vue";
+import Home from "./pages/Home.vue";
+import Logs from "./pages/Logs.vue";
+
+const routes = [
+  {
+    path: "/",
+    component: Home,
+  },
+  {
+    path: "/deployments/:id/logs/:logType",
+    component: Logs,
+  },
+];
+
+const router = VueRouter.createRouter({
+  history: VueRouter.createWebHashHistory(),
+  routes,
+});
+
+createApp(App).use(router).mount("#app");

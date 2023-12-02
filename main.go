@@ -97,15 +97,16 @@ func main() {
 	)
 
 	app.Use(func(c *fiber.Ctx) error {
-		// Skip API routes
-		if bytes.HasPrefix(c.Request().URI().Path(), []byte("/runner/api")) {
+		// Skip Frontend and API routes
+		if bytes.HasPrefix(c.Request().URI().Path(), []byte("/runner")) {
 			return c.Next()
 		}
 
-		// Forward to docker container
+		// Find deployment by domain
 		deployment := getDeploymentByDomain(strings.Split(c.Hostname(), ":")[0]) // Remove port
 		if deployment == nil {
-			return fiber.NewError(fiber.StatusNotFound, "Deployment not found")
+			return c.Redirect("/runner")
+			//return fiber.NewError(fiber.StatusNotFound, "Deployment not found")
 		}
 
 		err := proxy.Do(c, fmt.Sprintf("http://127.0.0.1:%s", *deployment.Port))
@@ -115,6 +116,9 @@ func main() {
 
 		return c.Next()
 	})
+
+	// Serve Vue Frontend
+	app.Static("/runner", "./www/dist")
 
 	app.Get("/runner/api/info", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
@@ -207,6 +211,51 @@ func main() {
 		}
 
 		return c.JSON(deployment)
+	})
+
+	app.Get("/runner/api/deployments/:id/logs/:logType", func(c *fiber.Ctx) error {
+		id := c.Params("id", "")
+		if id == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid deployment id")
+		}
+
+		logType := c.Params("logType", "")
+		if logType != "build" && logType != "running" {
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid log type")
+		}
+
+		deployment := getDeploymentById(id)
+		if deployment == nil {
+			return fiber.NewError(fiber.StatusBadRequest, "Unkown deployment id")
+		}
+
+		if deployment.BuildJob == nil {
+			return fiber.NewError(fiber.StatusBadRequest, "No build job found")
+		}
+
+		var err error
+		var logs string
+
+		if logType == "build" {
+			logs, err = deployment.BuildJob.GetLogs()
+			if err != nil {
+				return fiber.NewError(fiber.StatusBadRequest, err.Error())
+			}
+		}
+		if logType == "running" {
+			logs, err = deployment.GetLogs()
+			if err != nil {
+				return fiber.NewError(fiber.StatusBadRequest, err.Error())
+			}
+		}
+
+		return c.JSON(fiber.Map{
+			"logs": logs,
+		})
+	})
+
+	app.Get("/runner/*", func(ctx *fiber.Ctx) error {
+		return ctx.SendFile("./www/dist/index.html", false)
 	})
 
 	if ssl {

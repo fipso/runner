@@ -1,5 +1,6 @@
 name = "NextJS"
 match_dependencies = ["next"]
+info = "Please make sure you are using output: 'standalone' in your next.config.js"
 
 [build]
 image = "node:lts-alpine3.17"
