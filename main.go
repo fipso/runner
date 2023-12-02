@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -49,7 +51,24 @@ var debug bool
 var port string
 var sslPort string
 
+func writeConfig() {
+	data, err := json.Marshal(apps)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = os.WriteFile("./apps.json", data, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func main() {
+	// Save config on exit
+	defer func() {
+		writeConfig()
+	}()
+
 	// Handle CLI
 	flag.StringVar(&domain, "domain", "", "Base domain for all deployments and UI")
 	flag.BoolVar(&ssl, "ssl", false, "Enable SSL")
@@ -107,6 +126,10 @@ func main() {
 		if deployment == nil {
 			return c.Redirect("/runner")
 			//return fiber.NewError(fiber.StatusNotFound, "Deployment not found")
+		}
+
+		if deployment.Status != "Running" {
+			return c.Redirect("/runner#/deployments/" + deployment.Id + "/logs/build")
 		}
 
 		err := proxy.Do(c, fmt.Sprintf("http://127.0.0.1:%s", *deployment.Port))
@@ -250,7 +273,8 @@ func main() {
 		}
 
 		return c.JSON(fiber.Map{
-			"logs": logs,
+			"logs":         logs,
+			"build_status": deployment.BuildJob.Status,
 		})
 	})
 

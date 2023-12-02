@@ -2,7 +2,10 @@
 import { onMounted, ref } from "vue";
 import { Modal } from "bootstrap";
 
+import DeploymentLog from "./DeploymentLog.vue";
+
 const appId = ref<string>("");
+const deploymentId = ref<string>("");
 const branch = ref<string>("");
 const commit = ref<string>("");
 
@@ -34,7 +37,7 @@ const onSubmit = async () => {
 
   try {
     loading.value = true;
-    await fetch(`/runner/api/app/${appId.value}/deploy`, {
+    const res = await fetch(`/runner/api/app/${appId.value}/deploy`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -44,18 +47,18 @@ const onSubmit = async () => {
         commit: commit.value,
       }),
     });
-    loading.value = false;
+
+    const data = await res.json();
+    deploymentId.value = data.id;
   } catch (err) {
     alert(err);
     console.log(err);
   }
-
-  hide();
 };
 </script>
 
 <template>
-  <div ref="modalRef" class="modal" tabindex="-1">
+  <div ref="modalRef" class="modal modal-xl" tabindex="-1">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
@@ -73,6 +76,9 @@ const onSubmit = async () => {
               <input type="text" class="form-control" id="commit" v-model="commit" />
             </div>
           </form>
+
+          <h6>Build Logs</h6>
+          <DeploymentLog v-if="deploymentId" :deploymentId="deploymentId" logType="build" @buildDone="loading = false" />
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" @click="hide">
@@ -81,7 +87,9 @@ const onSubmit = async () => {
           <button v-if="!loading" @click="onSubmit" type="button" class="btn btn-primary">
             Deploy
           </button>
-          <button v-else type="button" class="btn btn-primary" disabled>Deploying...</button>
+          <button v-else type="button" class="btn btn-primary" disabled>
+            Deploying...
+          </button>
         </div>
       </div>
     </div>

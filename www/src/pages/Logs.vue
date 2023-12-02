@@ -1,28 +1,15 @@
 <script lang="ts" setup>
-import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
+import DeploymentLog from "../components/DeploymentLog.vue";
 
 const route = useRoute();
-const deploymentId = route.params.id;
-const logType = route.params.logType;
-
-const logContent = ref("");
-
-const loadLogs = async () => {
-  const logsReq = await fetch(
-    `/runner/api/deployments/${deploymentId}/logs/${logType}`,
-  );
-  logContent.value = (await logsReq.json()).logs;
-};
-
-onMounted(() => {
-  loadLogs();
-});
+const deploymentId = route.params.id as string;
+const logType = route.params.logType as string;
 </script>
 
 <template>
   <main class="container p-5">
     <h1>Logs</h1>
-    <pre>{{ logContent }}</pre>
+    <DeploymentLog v-if="deploymentId" :deploymentId="deploymentId" :logType="logType" />
   </main>
 </template>

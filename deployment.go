@@ -18,7 +18,7 @@ type Deployment struct {
 	GitCommit   string    `json:"git_commit"`
 	Status      string    `json:"status"`
 	Port        *string   `json:"port"`
-	BuildJob    *BuildJob `json:"-"`
+	BuildJob    *BuildJob `json:"build_job"`
 	App         *App      `json:"-"`
 }
 
@@ -75,6 +75,8 @@ func (d *Deployment) Run() (err error) {
 		} else {
 			d.Status = "Success"
 		}
+
+		writeConfig()
 	}()
 
 	template := deploymentTemplates[*d.App.TemplateId]
@@ -134,6 +136,9 @@ func (d *Deployment) Run() (err error) {
 }
 
 func (d *Deployment) GetLogs() (logs string, err error) {
+	if d.ContainerId == nil {
+		return "", fmt.Errorf("No container found yet")
+	}
 	logs, err = dockerLogs(*d.ContainerId)
 	return
 }

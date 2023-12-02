@@ -48,19 +48,25 @@ func (a *App) Deploy(gitBranch, gitCommit string) (deployment *Deployment, err e
 	}
 	deployment.BuildJob = &buildJob
 
-	err = buildJob.Run()
-	if err != nil {
-		return nil, err
-	}
-
-	deployment.Status = fmt.Sprintf("Build: %s", buildJob.Status)
-
-	err = deployment.Run()
-	if err != nil {
-		return nil, err
-	}
-
 	a.Deployments = append(a.Deployments, *deployment)
+        writeConfig()
+
+	// Build and deploy in background
+	go func() {
+		err = buildJob.Run()
+		if err != nil {
+			log.Println("[Build Job]", err)
+		}
+
+		deployment.Status = fmt.Sprintf("Build: %s", buildJob.Status)
+
+		err = deployment.Run()
+		if err != nil {
+			log.Println("[Build Job]", err)
+		}
+
+                writeConfig()
+	}()
 
 	return
 }
@@ -92,6 +98,8 @@ func (b *BuildJob) Run() (err error) {
 		} else {
 			b.Status = "Success"
 		}
+
+                writeConfig()
 	}()
 
 	// Create tmp mount dir
@@ -179,6 +187,9 @@ LOOP:
 }
 
 func (b *BuildJob) GetLogs() (logs string, err error) {
+	if b.ContainerId == nil {
+		return "", fmt.Errorf("No build container found yet")
+	}
 	logs, err = dockerLogs(*b.ContainerId)
 	return
 }

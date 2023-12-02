@@ -120,7 +120,7 @@ func dockerLogs(id string) (string, error) {
 	reader, err := docker.ContainerLogs(
 		context.Background(),
 		id,
-		types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true},
+                types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Timestamps: true},
 	)
 	if err != nil {
 		return "", err
