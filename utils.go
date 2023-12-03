@@ -108,20 +108,24 @@ func createDirIfNotExists(path string) error {
 	return nil
 }
 
+// Trying to not copy structs here
+
+// TODO: check if we break references here
 func getAllDeployments() []Deployment {
 	return lo.FlatMap(apps, func(app App, index int) []Deployment {
-		return app.Deployments
+		return apps[index].Deployments
 	})
 }
 
 func getDeploymentByDomain(domain string) *Deployment {
-	deployment, found := lo.Find(getAllDeployments(), func(deployment Deployment) bool {
+	allDeployments := getAllDeployments()
+	_, i, found := lo.FindIndexOf(allDeployments, func(deployment Deployment) bool {
 		return deployment.GetDomain() == domain
 	})
 	if !found {
 		return nil
 	}
-	return &deployment
+	return &allDeployments[i]
 }
 
 func getAppById(id string) *App {
@@ -135,13 +139,14 @@ func getAppById(id string) *App {
 }
 
 func getDeploymentById(id string) *Deployment {
-	deployment, found := lo.Find(getAllDeployments(), func(deployment Deployment) bool {
+	allDeployments := getAllDeployments()
+	_, i, found := lo.FindIndexOf(allDeployments, func(deployment Deployment) bool {
 		return deployment.Id == id
 	})
 	if !found {
 		return nil
 	}
-	return &deployment
+	return &allDeployments[i]
 }
 
 func makeId() string {

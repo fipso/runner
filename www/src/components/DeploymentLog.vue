@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, ref, defineProps } from "vue";
+import { onMounted, onUnmounted, ref, defineProps } from "vue";
 
 const props = defineProps<{
   deploymentId: string;
@@ -8,45 +8,52 @@ const props = defineProps<{
 
 const emit = defineEmits(["buildDone"]);
 
-const buildLogs = ref("");
-const loadingBuildLogs = ref(false);
+const logs = ref("");
+const loadingLogs = ref(false);
 const buildDone = ref(false);
+const deploymentUrl = ref("");
 let logsInterval: any = null;
 
-const loadBuildLogs = async () => {
-  if (loadingBuildLogs.value) {
+const loadLogs = async () => {
+  if (loadingLogs.value) {
     return;
   }
-  loadingBuildLogs.value = true;
+  loadingLogs.value = true;
   buildDone.value = false;
   try {
     const logsReq = await fetch(
-      `/runner/api/deployments/${props.deploymentId}/logs/build`,
+      `/runner/api/deployments/${props.deploymentId}/logs/${props.logType}`,
     );
     const data = await logsReq.json();
 
-    buildLogs.value = data.logs;
+    logs.value = data.logs;
 
-    if (data.build_status !== "Building") {
+    if (props.logType == "build" && data.build_status !== "Building") {
       buildDone.value = true;
       clearInterval(logsInterval);
-      emit("buildDone");
+      emit("buildDone", data.build_status);
     }
   } catch (err) {
     console.log(err);
   }
-  loadingBuildLogs.value = false;
+  loadingLogs.value = false;
 };
 
 onMounted(() => {
-  loadBuildLogs();
-  logsInterval = setInterval(loadBuildLogs, 500);
+  loadLogs();
+  logsInterval = setInterval(loadLogs, 500);
+});
+
+onUnmounted(() => {
+  clearInterval(logsInterval);
 });
 </script>
 
 <template>
-  <div v-if="buildDone" class="alert alert-success">
-    <span>Deployment built successfuly</span>
+  <div v-if="buildDone || deploymentUrl" class="alert alert-success">
+    <span v-if="buildDone">Deployment was built successfully</span>
+    <span v-if="deploymentUrl">Deployment successfully deployed to:
+      <a :href="deploymentUrl" target="_blank">{{ deploymentUrl }}</a></span>
   </div>
-  <pre>{{ buildLogs }}</pre>
+  <pre>{{ logs }}</pre>
 </template>

@@ -22,14 +22,6 @@ type Deployment struct {
 	App         *App      `json:"-"`
 }
 
-type BuildJob struct {
-	Id            string      `json:"id"`
-	ContainerId   *string     `json:"container_id"`
-	Status        string      `json:"status"`
-	ArtifactsPath string      `json:"artifacts_path"`
-	Deployment    *Deployment `json:"-"`
-}
-
 func (d Deployment) GetSlug() string {
 	return fmt.Sprintf("%s-%s-%s", d.App.Name, d.GitBranch, d.GitCommit)
 }
@@ -68,12 +60,12 @@ func (d *Deployment) MarshalJSON() ([]byte, error) {
 }
 
 func (d *Deployment) Run() (err error) {
-	// Update build job status
+	// Update status
 	defer func() {
 		if err != nil {
 			d.Status = "Failed"
 		} else {
-			d.Status = "Success"
+			d.Status = "Running"
 		}
 
 		writeConfig()

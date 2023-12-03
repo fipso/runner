@@ -27,7 +27,7 @@ onMounted(async () => {
 
 <template>
   <NewAppModal ref="newAppModalRef" @success="loadApps" />
-  <DeployCommitModal ref="deployCommitModalRef" />
+  <DeployCommitModal ref="deployCommitModalRef" @closed="loadApps" />
   <main class="container p-5">
     <!-- Top Row -->
     <div class="row m-3">
@@ -62,11 +62,21 @@ onMounted(async () => {
               <a :href="deployment.url" target="_blank">{{ deployment.url }}</a>
             </p>
 
-            <p class="m-0">
-              Logs:
-              <RouterLink :to="`/deployments/${deployment.id}/logs/build`">Build</RouterLink>{{ " " }}
-              <RouterLink :to="`/deployments/${deployment.id}/logs/running`">Running</RouterLink>
-            </p>
+            <div class="d-flex justify-content-between align-items-center">
+              <p class="m-0">
+                Logs:
+                <RouterLink :to="`/deployments/${deployment.id}/logs/build`">Build</RouterLink>{{ " " }}
+                <RouterLink :to="`/deployments/${deployment.id}/logs/running`">Running</RouterLink>
+              </p>
+              <div>
+                <button class="btn btn-warning btn-sm me-1" type="button">
+                  SSH
+                </button>
+                <button class="btn btn-danger btn-sm" type="button">
+                  Delete
+                </button>
+              </div>
+            </div>
           </li>
         </ul>
 

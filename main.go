@@ -272,9 +272,14 @@ func main() {
 			}
 		}
 
+		var deploymentUrl string
+		if deployment.Status == "Running" {
+			deploymentUrl = deployment.GetUrl()
+		}
 		return c.JSON(fiber.Map{
 			"logs":         logs,
 			"build_status": deployment.BuildJob.Status,
+			"url":          deploymentUrl,
 		})
 	})
 

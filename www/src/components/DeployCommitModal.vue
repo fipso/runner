@@ -13,6 +13,8 @@ const loading = ref(false);
 const modalRef = ref<HTMLElement | null>();
 const modal = ref<Modal | null>();
 
+const buildSuccess = ref(false);
+
 onMounted(() => {
   modal.value = new Modal(modalRef.value as Element, {});
 });
@@ -25,8 +27,11 @@ defineExpose({
   show,
 });
 
+const emit = defineEmits(["closed"]);
+
 const hide = () => {
   modal.value?.hide();
+  emit("closed");
 };
 
 const onSubmit = async () => {
@@ -34,6 +39,9 @@ const onSubmit = async () => {
     alert("Please fill out all required fields");
     return;
   }
+
+  buildSuccess.value = false;
+  deploymentId.value = "";
 
   try {
     loading.value = true;
@@ -53,6 +61,13 @@ const onSubmit = async () => {
   } catch (err) {
     alert(err);
     console.log(err);
+  }
+};
+
+const onBuildDone = (status: string) => {
+  loading.value = false;
+  if (status == "Success") {
+    buildSuccess.value = true;
   }
 };
 </script>
@@ -78,7 +93,10 @@ const onSubmit = async () => {
           </form>
 
           <h6>Build Logs</h6>
-          <DeploymentLog v-if="deploymentId" :deploymentId="deploymentId" logType="build" @buildDone="loading = false" />
+          <DeploymentLog v-if="deploymentId" :deploymentId="deploymentId" logType="build" @buildDone="onBuildDone" />
+
+          <h6 v-if="buildSuccess">Runtime Logs</h6>
+          <DeploymentLog v-if="buildSuccess" :deploymentId="deploymentId" logType="running" />
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" @click="hide">
