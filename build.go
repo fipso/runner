@@ -25,6 +25,8 @@ type BuildJob struct {
 
 func (b *BuildJob) Run() (err error) {
 	// Update build job status
+
+	b.Deployment.Status = "Building"
 	defer func() {
 		if err != nil {
 			b.Status = "Failed"
