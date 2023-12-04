@@ -65,7 +65,7 @@ onMounted(async () => {
         </p>
         <p class="card-text"></p>
         <!-- Deployments List -->
-        <ul class="list-group mb-3">
+        <ul class="list-group mb-3 overflow-y-scroll" style="max-height: 600px; !important">
           <li class="list-group-item" v-for="deployment in app.deployments">
             <div class="d-flex justify-content-between align-items-center">
               <strong>{{ deployment.git_branch }}/{{ deployment.git_commit }}</strong>
