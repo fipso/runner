@@ -6,15 +6,15 @@ import (
 )
 
 type App struct {
-	Id          string       `json:"id"`
-	Name        string       `json:"name"`
-	Port        *string      `json:"port"`
-	Env         *string      `json:"env"`
-	GitUrl      string       `json:"git_url"`
-	GitUsername *string      `json:"git_username"`
-	GitPassword *string      `json:"git_password"`
-	TemplateId  *string      `json:"template_id"`
-	Deployments []Deployment `json:"deployments"`
+	Id          string        `json:"id"`
+	Name        string        `json:"name"`
+	Port        *string       `json:"port"`
+	Env         *string       `json:"env"`
+	GitUrl      string        `json:"git_url"`
+	GitUsername *string       `json:"git_username"`
+	GitPassword *string       `json:"git_password"`
+	TemplateId  *string       `json:"template_id"`
+	Deployments []*Deployment `json:"deployments"`
 }
 
 func (a *App) Deploy(gitBranch, gitCommit string) (deployment *Deployment, err error) {
@@ -38,11 +38,11 @@ func (a *App) Deploy(gitBranch, gitCommit string) (deployment *Deployment, err e
 	}
 	deployment.BuildJob = buildJob
 
-	a.Deployments = append(a.Deployments, *deployment)
+	a.Deployments = append(a.Deployments, deployment)
 	writeConfig()
 
 	// Build and deploy in background
-	go func() {
+	go func(buildJob *BuildJob, deployment *Deployment) {
 		err = buildJob.Run()
 		if err != nil {
 			log.Println("[Build Job]", err)
@@ -56,7 +56,7 @@ func (a *App) Deploy(gitBranch, gitCommit string) (deployment *Deployment, err e
 		}
 
 		writeConfig()
-	}()
+	}(buildJob, deployment)
 
 	return
 }

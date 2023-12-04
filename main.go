@@ -42,7 +42,7 @@ type StepRun struct {
 
 // Globals
 var deploymentTemplates map[string]TemplateConfig
-var apps []App
+var apps []*App
 
 // CLI Flags
 var domain string
@@ -199,7 +199,7 @@ func main() {
 			Env:         ptr(body.Env),
 		}
 
-		apps = append(apps, app)
+		apps = append(apps, &app)
 
 		return c.JSON(app)
 	})
