@@ -3,7 +3,7 @@ import { onMounted, ref } from "vue";
 import { Modal } from "bootstrap";
 
 const appName = ref<string>("");
-const appTemplate = ref<string>("");
+const appTemplate = ref<string>("nextjs");
 const appGitUrl = ref<string>("");
 const appGitUsername = ref<string>("");
 const appGitPassword = ref<string>("");
@@ -12,6 +12,8 @@ const appEnv = ref<string>("");
 const loading = ref(false);
 const modalRef = ref<HTMLElement | null>();
 const modal = ref<Modal | null>();
+
+const props = defineProps<{ templates: any }>();
 
 onMounted(() => {
   modal.value = new Modal(modalRef.value as Element, {});
@@ -66,7 +68,7 @@ const onSubmit = async () => {
 </script>
 
 <template>
-  <div ref="modalRef" class="modal" tabindex="-1">
+  <div ref="modalRef" class="modal modal-lg" tabindex="-1">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
@@ -87,10 +89,24 @@ const onSubmit = async () => {
                 <option value="react" disabled>React</option>
                 <option value="static" disabled>Static</option>
               </select>
+              <div class="px-2">
+                <span class="d-block">Image:
+                  <span class="text-primary">{{
+                    props.templates[appTemplate].build.image
+                  }}</span></span>
+                <span>Script: </span>
+                <textarea class="form-control" v-if="props.templates?.[appTemplate]?.build?.script" :rows="props.templates[appTemplate].build.script.split('\n')
+                    .length + 1
+                  " disabled>{{ props.templates[appTemplate].build.script }}</textarea>
+                <div v-if="props.templates?.[appTemplate]?.info" class="alert alert-info mt-2 mb-1">
+                  <span>{{ props.templates[appTemplate].info }}</span>
+                </div>
+              </div>
             </div>
             <div class="mb-3">
               <label for="appGitUrl" class="form-label">Git URL*</label>
-              <input type="text" class="form-control" id="appGitUrl" v-model="appGitUrl" />
+              <input type="text" class="form-control" id="appGitUrl" v-model="appGitUrl"
+                placeholder="https://github.com/fipso/nextjs-standalone-example.git" />
             </div>
             <div class="mb-3">
               <label for="appGitUsername" class="form-label">Git Username</label>
@@ -102,7 +118,8 @@ const onSubmit = async () => {
             </div>
             <div class="mb-3">
               <label for="appEnv" class="form-label">Environment Variables</label>
-              <textarea v-model="appEnv" class="form-control" id="appEnv"></textarea>
+              <textarea v-model="appEnv" class="form-control" id="appEnv" rows="5"
+                placeholder="NODE_ENV=production"></textarea>
             </div>
           </form>
         </div>

@@ -18,26 +18,25 @@ import (
 )
 
 type TemplateConfig struct {
-	Name              string    `toml:"name"`
-	MatchDependencies []string  `toml:"match_dependencies"`
-	Build             StepBuild `toml:"build"`
-	Run               StepRun   `toml:"run"`
+	Name              string    `toml:"name"               json:"name"`
+	MatchDependencies []string  `toml:"match_dependencies" json:"match_dependencies"`
+	Info              string    `toml:"info"               json:"info"`
+	Build             StepBuild `toml:"build"              json:"build"`
+	Run               StepRun   `toml:"run"                json:"run"`
 }
 
-type BuildStep struct {
-	Image        string  `toml:"image"`
-	Cmd          string  `toml:"cmd"`
-	BeforeScript *string `toml:"before_script,omitempty"`
-	AfterScript  *string `toml:"after_script,omitempty"`
+type DeployStep struct {
+	Image  string `toml:"image"  json:"image"`
+	Script string `toml:"script" json:"script"`
 }
 
 type StepBuild struct {
-	BuildStep
+	DeployStep
 	Artifact string `toml:"artifact"`
 }
 
 type StepRun struct {
-	BuildStep
+	DeployStep
 	Port string `toml:"port"`
 }
 
@@ -166,6 +165,8 @@ func main() {
 
 	app.Get("/runner/api/info", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
+			"templates": deploymentTemplates,
+			// Unused for now:
 			"domain":  domain,
 			"ssl":     ssl,
 			"debug":   debug,
