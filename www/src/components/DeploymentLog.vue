@@ -22,11 +22,12 @@ const loadLogs = async () => {
   buildDone.value = false;
   try {
     const logsReq = await fetch(
-      `/runner/api/deployments/${props.deploymentId}/logs/${props.logType}`,
+      `/runner/api/deployment/${props.deploymentId}/logs/${props.logType}`,
     );
     const data = await logsReq.json();
 
     logs.value = data.logs;
+    deploymentUrl.value = data.url;
 
     if (props.logType == "build" && data.build_status !== "Building") {
       buildDone.value = true;
@@ -51,8 +52,8 @@ onUnmounted(() => {
 
 <template>
   <div v-if="buildDone || deploymentUrl" class="alert alert-success">
-    <span v-if="buildDone">Deployment was built successfully</span>
-    <span v-if="deploymentUrl">Deployment successfully deployed to:
+    <span v-if="props.logType == 'build' && buildDone">Deployment was built successfully</span>
+    <span v-if="props.logType == 'running' && deploymentUrl">Deployment successfully deployed to:
       <a :href="deploymentUrl" target="_blank">{{ deploymentUrl }}</a></span>
   </div>
   <pre>{{ logs }}</pre>

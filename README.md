@@ -4,15 +4,13 @@
 
 Zero config vercel like preview deployments using docker
 
-Status: In early development. Deployment works kinda but WebUI is still very WIP
+Status: In early development
 
 ### Features
-- [ ] Data persistence
-  - Currently all deployments/apps are only stored in memory
 - Web UI
   - [ ] Connect with git providers via OAuth
   - [ ] Configure deployments
-  - [ ] Show build/runtime logs
+  - [x] Show build/runtime logs
 - Fast builds using docker
 - Comes with ready to use build templates:
   - [x] NextJS
@@ -22,6 +20,9 @@ Status: In early development. Deployment works kinda but WebUI is still very WIP
 - [x] Templates are easy to modify using .toml files
 - [x] Automatic SSL using Let's Encrypt ACME
 - [ ] SSH directly into container
+
+### TODO
+- [ ] Make 'update env' work
 
 ### Stuff we dont care about for now
 - Scalability

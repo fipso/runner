@@ -17,6 +17,22 @@ const loadApps = async () => {
   apps.value = await appsReq.json();
 };
 
+const deleteApp = async (id: string) => {
+  if (!confirm("Are you sure you want to delete this app?")) {
+    return;
+  }
+  await fetch(`/runner/api/app/${id}`, { method: "DELETE" });
+  loadApps();
+};
+
+const deleteDeployment = async (id: string) => {
+  if (!confirm("Are you sure you want to delete this deployment?")) {
+    return;
+  }
+  await fetch(`/runner/api/deployment/${id}`, { method: "DELETE" });
+  loadApps();
+};
+
 onMounted(async () => {
   const infoReq = await fetch("/runner/api/info");
   info.value = await infoReq.json();
@@ -65,14 +81,16 @@ onMounted(async () => {
             <div class="d-flex justify-content-between align-items-center">
               <p class="m-0">
                 Logs:
-                <RouterLink :to="`/deployments/${deployment.id}/logs/build`">Build</RouterLink>{{ " " }}
-                <RouterLink :to="`/deployments/${deployment.id}/logs/running`">Running</RouterLink>
+                <RouterLink :to="`/deployment/${deployment.id}/logs/build`">Build</RouterLink>{{ " " }}
+                <RouterLink :to="`/deployment/${deployment.id}/logs/running`">Running</RouterLink>
               </p>
               <div>
+                <!--
                 <button class="btn btn-warning btn-sm me-1" type="button">
                   SSH
                 </button>
-                <button class="btn btn-danger btn-sm" type="button">
+                -->
+                <button class="btn btn-danger btn-sm" type="button" @click="deleteDeployment(deployment.id)">
                   Delete
                 </button>
               </div>
@@ -83,7 +101,12 @@ onMounted(async () => {
         <button class="btn btn-primary me-3" type="button" @click="deployCommitModalRef?.show(app.id)">
           Deploy Commit
         </button>
-        <button class="btn btn-danger" type="button">Delete</button>
+        <button class="btn btn-warning me-3" type="button">
+          Update Env
+        </button>
+        <button class="btn btn-danger" type="button" @click="deleteApp(app.id)">
+          Delete
+        </button>
       </div>
     </div>
   </main>

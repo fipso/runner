@@ -12,6 +12,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
+	"github.com/samber/lo"
 	"github.com/valyala/fasthttp"
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -52,7 +53,7 @@ var port string
 var sslPort string
 
 func writeConfig() {
-	data, err := json.Marshal(apps)
+	data, err := json.MarshalIndent(apps, "", "  ")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -80,6 +81,26 @@ func main() {
 
 	if domain == "" {
 		log.Fatal("-domain is required")
+	}
+
+	// Load config
+	data, err := os.ReadFile("./apps.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = json.Unmarshal(data, &apps)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Recreate pointer references for app and deployment
+	for _, app := range apps {
+		for _, deployment := range app.Deployments {
+			deployment.App = app
+			if deployment.BuildJob != nil {
+				deployment.BuildJob.Deployment = deployment
+			}
+		}
 	}
 
 	// Init
@@ -129,7 +150,7 @@ func main() {
 		}
 
 		if deployment.Status != "Running" {
-			return c.Redirect("/runner#/deployments/" + deployment.Id + "/logs/build")
+			return c.Redirect("/runner#/deployment/" + deployment.Id + "/logs/build")
 		}
 
 		err := proxy.Do(c, fmt.Sprintf("http://127.0.0.1:%s", *deployment.Port))
@@ -201,7 +222,33 @@ func main() {
 
 		apps = append(apps, &app)
 
+		writeConfig()
+
 		return c.JSON(app)
+	})
+
+	app.Delete("/runner/api/app/:id", func(c *fiber.Ctx) error {
+		id := c.Params("id", "")
+		if id == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid app id")
+		}
+
+		app := getAppById(id)
+		if app == nil {
+			return fiber.NewError(fiber.StatusBadRequest, "Unkown app id")
+		}
+
+		// Delete app
+		apps = lo.Filter(apps, func(a *App, i int) bool {
+			return a.Id != id
+		})
+
+		writeConfig()
+
+		return c.JSON(fiber.Map{
+			"success": true,
+		})
+
 	})
 
 	app.Post("/runner/api/app/:id/deploy", func(c *fiber.Ctx) error {
@@ -236,7 +283,34 @@ func main() {
 		return c.JSON(deployment)
 	})
 
-	app.Get("/runner/api/deployments/:id/logs/:logType", func(c *fiber.Ctx) error {
+	app.Delete("/runner/api/deployment/:id", func(c *fiber.Ctx) error {
+		id := c.Params("id", "")
+		if id == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid deployment id")
+		}
+
+		deployment := getDeploymentById(id)
+		if deployment == nil {
+			return fiber.NewError(fiber.StatusBadRequest, "Unkown deployment id")
+		}
+
+		// Delete deployment
+		deployment.App.Deployments = lo.Filter(
+			deployment.App.Deployments,
+			func(d *Deployment, i int) bool {
+				return d.Id != id
+			},
+		)
+
+		writeConfig()
+
+		return c.JSON(fiber.Map{
+			"success": true,
+		})
+
+	})
+
+	app.Get("/runner/api/deployment/:id/logs/:logType", func(c *fiber.Ctx) error {
 		id := c.Params("id", "")
 		if id == "" {
 			return fiber.NewError(fiber.StatusBadRequest, "Invalid deployment id")

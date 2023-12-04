@@ -16,7 +16,7 @@ const routes = [
     component: Home,
   },
   {
-    path: "/deployments/:id/logs/:logType",
+    path: "/deployment/:id/logs/:logType",
     component: Logs,
   },
 ];
