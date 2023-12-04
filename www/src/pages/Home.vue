@@ -4,7 +4,7 @@ import { RouterLink } from "vue-router";
 import NewAppModal from "../components/NewAppModal.vue";
 import DeployCommitModal from "../components/DeployCommitModal.vue";
 
-const info = ref({});
+const info = ref<any>({});
 const apps = ref<any>([]);
 
 const newAppModalRef = ref<InstanceType<typeof NewAppModal> | null>(null);
@@ -13,6 +13,9 @@ const deployCommitModalRef = ref<InstanceType<typeof DeployCommitModal> | null>(
 );
 
 const loadApps = async () => {
+  const infoReq = await fetch("/runner/api/info");
+  info.value = await infoReq.json();
+
   const appsReq = await fetch("/runner/api/app");
   apps.value = await appsReq.json();
 };
@@ -34,15 +37,12 @@ const deleteDeployment = async (id: string) => {
 };
 
 onMounted(async () => {
-  const infoReq = await fetch("/runner/api/info");
-  info.value = await infoReq.json();
-
   loadApps();
 });
 </script>
 
 <template>
-  <NewAppModal ref="newAppModalRef" @success="loadApps" />
+  <NewAppModal v-if="info.templates" ref="newAppModalRef" :templates="info.templates" @success="loadApps" />
   <DeployCommitModal ref="deployCommitModalRef" @closed="loadApps" />
   <main class="container p-5">
     <!-- Top Row -->
@@ -101,9 +101,7 @@ onMounted(async () => {
         <button class="btn btn-primary me-3" type="button" @click="deployCommitModalRef?.show(app.id)">
           Deploy Commit
         </button>
-        <button class="btn btn-warning me-3" type="button">
-          Update Env
-        </button>
+        <button class="btn btn-warning me-3" type="button">Update Env</button>
         <button class="btn btn-danger" type="button" @click="deleteApp(app.id)">
           Delete
         </button>

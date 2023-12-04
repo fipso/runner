@@ -93,20 +93,9 @@ func (d *Deployment) Run() (err error) {
 	}
 
 	// Write run script into container
-	beforeScript := ""
-	if template.Run.BeforeScript != nil {
-		beforeScript = *template.Run.BeforeScript
-	}
-	afterScript := ""
-	if template.Run.AfterScript != nil {
-		afterScript = *template.Run.AfterScript
-	}
-
 	runScript := fmt.Sprintf(
-		"#!/bin/sh\n\ncd /runner/\n\n#Before Script:\n%s\n#Run Command:\n%s\n#After Script:\n%s",
-		beforeScript,
-		template.Run.Cmd,
-		afterScript,
+		"#!/bin/sh\n\ncd /runner/\n\n%s",
+		template.Run.Script,
 	)
 	err = os.WriteFile(path.Join(workDir, "r_run.sh"), []byte(runScript), 0755)
 

@@ -4,20 +4,24 @@ info = "Please make sure you are using output: 'standalone' in your next.config.
 
 [build]
 image = "node:lts-alpine3.17"
-before_script = "corepack pnpm install"
-cmd = "corepack pnpm run build"
-after_script = "cp -r ./public ./.next/standalone/public"
+script = """
+corepack pnpm install
+corepack pnpm run build
+
+cp -r ./public ./.next/standalone/public
+"""
 artifact = ".next/"
 
 [run]
 image = "node:lts-alpine3.17"
-before_script = """
+script = """
 # Setup NextJS standalone (+ static files) environment
 
 ln -s /runner/.next/static /runner/.next/standalone/.next/static
 cd .next/standalone
 
 export NODE_ENV=production
+
+node server.js
 """
-cmd = "node server.js"
 port = "3000/tcp"

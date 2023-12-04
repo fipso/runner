@@ -53,20 +53,9 @@ func (b *BuildJob) Run() (err error) {
 	template := deploymentTemplates[*b.Deployment.App.TemplateId]
 
 	// Write build script into container
-	beforeScript := ""
-	if template.Build.BeforeScript != nil {
-		beforeScript = *template.Build.BeforeScript
-	}
-	afterScript := ""
-	if template.Build.AfterScript != nil {
-		afterScript = *template.Build.AfterScript
-	}
-
 	buildScript := fmt.Sprintf(
-		"#!/bin/sh\n\ncd /runner/\n\n#Before Script:\n%s\n#Run Command:\n%s\n#After Script:\n%s",
-		beforeScript,
-		template.Build.Cmd,
-		afterScript,
+		"#!/bin/sh\n\ncd /runner/\n\n%s",
+		template.Build.Script,
 	)
 	err = os.WriteFile(path.Join(buildDir, "r_build.sh"), []byte(buildScript), 0755)
 
