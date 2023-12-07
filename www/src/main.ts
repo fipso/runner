@@ -7,13 +7,18 @@ import "bootstrap";
 
 import "./style.css";
 import App from "./App.vue";
-import Home from "./pages/Home.vue";
+import Dashboard from "./pages/Dashboard.vue";
+import AppPage from "./pages/App.vue";
 import Logs from "./pages/Logs.vue";
 
 const routes = [
   {
     path: "/",
-    component: Home,
+    component: Dashboard,
+  },
+  {
+    path: "/app/:id",
+    component: AppPage,
   },
   {
     path: "/deployment/:id/logs/:logType",
@@ -22,7 +27,7 @@ const routes = [
 ];
 
 const router = VueRouter.createRouter({
-  history: VueRouter.createWebHashHistory(),
+  history: VueRouter.createWebHistory("/runner"),
   routes,
 });
 

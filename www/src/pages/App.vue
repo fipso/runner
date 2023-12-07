@@ -1,25 +1,21 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import { RouterLink } from "vue-router";
-import NewAppModal from "../components/NewAppModal.vue";
+import { RouterLink, useRoute } from "vue-router";
 import DeployCommitModal from "../components/DeployCommitModal.vue";
 import UpdateEnvModal from "../components/UpdateEnvModal.vue";
 
-const info = ref<any>({});
-const apps = ref<any>([]);
+const route = useRoute();
 
-const newAppModalRef = ref<InstanceType<typeof NewAppModal> | null>(null);
+const app = ref<any>(null);
+
 const deployCommitModalRef = ref<InstanceType<typeof DeployCommitModal> | null>(
   null,
 );
 const updateEnvModalRef = ref<InstanceType<typeof UpdateEnvModal> | null>(null);
 
-const loadApps = async () => {
-  const infoReq = await fetch("/runner/api/info");
-  info.value = await infoReq.json();
-
-  const appsReq = await fetch("/runner/api/app");
-  apps.value = await appsReq.json();
+const loadData = async () => {
+  const appReq = await fetch(`/runner/api/app/${route.params.id}`);
+  app.value = await appReq.json();
 };
 
 const deleteApp = async (id: string) => {
@@ -27,7 +23,7 @@ const deleteApp = async (id: string) => {
     return;
   }
   await fetch(`/runner/api/app/${id}`, { method: "DELETE" });
-  loadApps();
+  loadData();
 };
 
 const deleteDeployment = async (id: string) => {
@@ -35,30 +31,28 @@ const deleteDeployment = async (id: string) => {
     return;
   }
   await fetch(`/runner/api/deployment/${id}`, { method: "DELETE" });
-  loadApps();
+  loadData();
 };
 
 onMounted(async () => {
-  loadApps();
+  loadData();
 });
 </script>
 
 <template>
-  <NewAppModal v-if="info.templates" ref="newAppModalRef" :templates="info.templates" @success="loadApps" />
-  <DeployCommitModal ref="deployCommitModalRef" @closed="loadApps" />
-  <UpdateEnvModal ref="updateEnvModalRef" @success="loadApps" />
+  <DeployCommitModal ref="deployCommitModalRef" @closed="loadData" />
+  <UpdateEnvModal ref="updateEnvModalRef" @success="loadData" />
 
-  <main class="container p-5">
+  <main v-if="app" class="container p-5">
+    <RouterLink to="/">Back</RouterLink>
+
     <!-- Top Row -->
     <div class="row m-3">
-      <h1 class="col-2">Apps</h1>
-      <button class="btn fs-4 btn-primary col-2 offset-8" type="button" @click="newAppModalRef?.show()">
-        Add New App
-      </button>
+      <h1 class="col-2">{{ app.name }}</h1>
     </div>
 
     <!-- Apps List -->
-    <div class="card m-3" v-for="app in apps">
+    <div class="card m-3">
       <h4 class="card-header">{{ app.name }}</h4>
 
       <div class="card-body">
