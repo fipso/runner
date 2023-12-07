@@ -84,7 +84,7 @@ LOOP:
 		case msg := <-eChan:
 			if msg.Type == "container" {
 				if msg.Action == "die" {
-					log.Println("Container died:", msg.Actor.ID)
+					log.Println("[Docker] Container exited:", msg.Actor.ID)
 					break LOOP
 				}
 			}

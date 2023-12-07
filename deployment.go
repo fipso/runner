@@ -6,13 +6,14 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"time"
 
 	cp "github.com/otiai10/copy"
 )
 
 type Deployment struct {
 	Id          string    `json:"id"`
-	Name        string    `json:"name"`
+	Time        time.Time `json:"time"`
 	ContainerId *string   `json:"container_id"`
 	GitBranch   string    `json:"git_branch"`
 	GitCommit   string    `json:"git_commit"`
@@ -47,14 +48,21 @@ func (d Deployment) GetUrl() string {
 	return fmt.Sprintf("http%s://%s%s", s, d.GetDomain(), p)
 }
 
+func (d Deployment) GetName() string {
+	short := d.GitCommit[:7]
+	return fmt.Sprintf("%s/%s", d.GitBranch, short)
+}
+
 func (d *Deployment) MarshalJSON() ([]byte, error) {
 	type Alias Deployment
 
 	return json.Marshal(struct {
 		*Alias
-		Url string `json:"url"`
+		Name string `json:"name"`
+		Url  string `json:"url"`
 	}{
 		Alias: (*Alias)(d),
+		Name:  d.GetName(),
 		Url:   d.GetUrl(),
 	})
 }

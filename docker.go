@@ -35,21 +35,20 @@ func dockerRun(
 		cmdParts = strings.Split(cmd, " ")
 	}
 
-	reader, err := docker.ImagePull(
+	_, err := docker.ImagePull(
 		context.Background(),
 		image,
 		types.ImagePullOptions{},
 	)
 	if err != nil {
 		return "", err
-	}
-	defer reader.Close()
 
-	// Read docker pull logs
-	buf := new(strings.Builder)
-	_, err = stdcopy.StdCopy(buf, buf, reader)
-	pullLogContent := buf.String()
-	log.Println(pullLogContent)
+	}
+	// defer reader.Close()
+	// // Read docker pull logs
+	// buf := new(strings.Builder)
+	// _, err = stdcopy.StdCopy(buf, buf, reader)
+	// pullLogContent := buf.String()
 
 	containerConfig := container.Config{
 		Image: image,
@@ -105,7 +104,7 @@ func dockerRun(
 		return "", err
 	}
 
-	log.Println("New container", resp.ID)
+        log.Println("[Docker] New container with id:", resp.ID)
 
 	// Start container
 	err = docker.ContainerStart(context.Background(), resp.ID, types.ContainerStartOptions{})

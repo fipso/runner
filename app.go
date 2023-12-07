@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 )
 
 type App struct {
@@ -18,6 +20,18 @@ type App struct {
 }
 
 func (a *App) Deploy(gitBranch, gitCommit string) (deployment *Deployment, err error) {
+
+	log.Println(
+		"[Deployment] Deploying branch:",
+		gitBranch,
+		"commit:",
+		gitCommit,
+		"for app:",
+		a.Name,
+		"with id:",
+		a.Id,
+	)
+
 	// templateId, err := a.suggestBuildTemplate(*a.RepoPath)
 	// if err != nil {
 	// 	return err
@@ -25,6 +39,7 @@ func (a *App) Deploy(gitBranch, gitCommit string) (deployment *Deployment, err e
 	// a.TemplateId = ptr(templateId)
 	deployment = &Deployment{
 		Id:        makeId(),
+		Time:      time.Now(),
 		App:       a,
 		GitBranch: gitBranch,
 		GitCommit: gitCommit,
@@ -78,4 +93,33 @@ func (a App) suggestBuildTemplate(path string) (templateId string, err error) {
 	}
 
 	return templateId, nil
+}
+
+func (a *App) GetWebhookUrl() string {
+	s := ""
+	p := ""
+	if ssl {
+		s = "s"
+		if sslPort != "443" {
+			p = fmt.Sprintf(":%s", sslPort)
+		}
+	} else {
+		if port != "80" {
+			p = fmt.Sprintf(":%s", port)
+		}
+
+	}
+	return fmt.Sprintf("http%s://%s%s/runner/api/app/%s/webhook/", s, domain, p, a.Id)
+}
+
+func (a *App) MarshalJSON() ([]byte, error) {
+	type Alias App
+
+	return json.Marshal(struct {
+		*Alias
+		WebhookUrl string `json:"webhook_url"`
+	}{
+		Alias:      (*Alias)(a),
+		WebhookUrl: a.GetWebhookUrl(),
+	})
 }
