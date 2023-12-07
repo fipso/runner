@@ -7,13 +7,18 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-playground/webhooks/v6/github"
+	"github.com/go-playground/webhooks/v6/gitlab"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
 	"github.com/samber/lo"
 	"github.com/valyala/fasthttp"
+	"github.com/valyala/fasthttp/fasthttpadaptor"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -228,6 +233,38 @@ func main() {
 		return c.JSON(app)
 	})
 
+	app.Post("/runner/api/app/:id/env", func(c *fiber.Ctx) error {
+		id := c.Params("id", "")
+		if id == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid app id")
+		}
+
+		app := getAppById(id)
+		if app == nil {
+			return fiber.NewError(fiber.StatusBadRequest, "Unkown app id")
+		}
+
+		var body struct {
+			Env string `json:"env"`
+		}
+
+		if err := c.BodyParser(&body); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+
+		if body.Env == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "Missing required fields")
+		}
+
+		app.Env = ptr(body.Env)
+
+		writeConfig()
+
+		return c.JSON(fiber.Map{
+			"success": true,
+		})
+	})
+
 	app.Delete("/runner/api/app/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id", "")
 		if id == "" {
@@ -243,6 +280,14 @@ func main() {
 		apps = lo.Filter(apps, func(a *App, i int) bool {
 			return a.Id != id
 		})
+
+		// Delete deployments
+		for _, deployment := range app.Deployments {
+			if deployment.ContainerId != nil {
+				dockerStop(*deployment.ContainerId)
+				dockerRemove(*deployment.ContainerId)
+			}
+		}
 
 		writeConfig()
 
@@ -303,6 +348,11 @@ func main() {
 			},
 		)
 
+		if deployment.ContainerId != nil {
+			dockerStop(*deployment.ContainerId)
+			dockerRemove(*deployment.ContainerId)
+		}
+
 		writeConfig()
 
 		return c.JSON(fiber.Map{
@@ -356,6 +406,80 @@ func main() {
 			"build_status": deployment.BuildJob.Status,
 			"url":          deploymentUrl,
 		})
+	})
+
+	githubHook, _ := github.New(github.Options.Secret("secure"))
+	gitlabHook, _ := gitlab.New(gitlab.Options.Secret("secure"))
+	app.Post("/runner/api/app/:id/webhook/:provider", func(c *fiber.Ctx) error {
+		id := c.Params("id", "")
+		if id == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid app id")
+		}
+
+		app := getAppById(id)
+		if app == nil {
+			return fiber.NewError(fiber.StatusBadRequest, "Unkown app id")
+		}
+
+		provider := c.Params("provider", "")
+
+		var r http.Request
+		err := fasthttpadaptor.ConvertRequest(c.Context(), &r, true)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+
+		var commit, branch string
+
+		switch provider {
+		case "github":
+			payload, err := githubHook.Parse(&r, github.PushEvent)
+			if err != nil {
+				if err == github.ErrEventNotFound {
+					return fiber.NewError(fiber.StatusBadRequest, "Invalid event")
+				} else {
+					return fiber.NewError(fiber.StatusBadRequest, err.Error())
+				}
+			}
+			switch payload.(type) {
+
+			case github.PushPayload:
+				push := payload.(github.PushPayload)
+				commit = push.After
+				branch = plumbing.ReferenceName(push.Ref).Short()
+			}
+
+		case "gitlab":
+			payload, err := gitlabHook.Parse(&r, gitlab.PushEvents)
+			if err != nil {
+				if err == gitlab.ErrEventNotFound {
+					return fiber.NewError(fiber.StatusBadRequest, "Invalid event")
+				} else {
+					return fiber.NewError(fiber.StatusBadRequest, err.Error())
+				}
+			}
+			switch payload.(type) {
+			case gitlab.PushEventPayload:
+				push := payload.(gitlab.PushEventPayload)
+				commit = push.After
+				branch = plumbing.ReferenceName(push.Ref).Short()
+			}
+
+		default:
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid provider type")
+		}
+
+		go func() {
+			_, err := app.Deploy(branch, commit)
+			if err != nil {
+				log.Println(err)
+			}
+		}()
+
+		return c.JSON(fiber.Map{
+			"success": true,
+		})
+
 	})
 
 	app.Get("/runner/*", func(ctx *fiber.Ctx) error {

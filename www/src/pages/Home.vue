@@ -3,6 +3,7 @@ import { onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import NewAppModal from "../components/NewAppModal.vue";
 import DeployCommitModal from "../components/DeployCommitModal.vue";
+import UpdateEnvModal from "../components/UpdateEnvModal.vue";
 
 const info = ref<any>({});
 const apps = ref<any>([]);
@@ -11,6 +12,7 @@ const newAppModalRef = ref<InstanceType<typeof NewAppModal> | null>(null);
 const deployCommitModalRef = ref<InstanceType<typeof DeployCommitModal> | null>(
   null,
 );
+const updateEnvModalRef = ref<InstanceType<typeof UpdateEnvModal> | null>(null);
 
 const loadApps = async () => {
   const infoReq = await fetch("/runner/api/info");
@@ -44,6 +46,8 @@ onMounted(async () => {
 <template>
   <NewAppModal v-if="info.templates" ref="newAppModalRef" :templates="info.templates" @success="loadApps" />
   <DeployCommitModal ref="deployCommitModalRef" @closed="loadApps" />
+  <UpdateEnvModal ref="updateEnvModalRef" @success="loadApps" />
+
   <main class="container p-5">
     <!-- Top Row -->
     <div class="row m-3">
@@ -62,13 +66,22 @@ onMounted(async () => {
           <strong>Template:</strong> {{ app.template_id }}
           <br />
           <strong>Git URL:</strong> {{ app.git_url }}
+          <br />
+          <strong>Push Webhook URL:</strong> {{ app.webhook_url
+          }}<select style="border: 1px solid lightgray; padding: 2px">
+            <option>github</option>
+            <option>gitlab</option>
+          </select>
         </p>
         <p class="card-text"></p>
         <!-- Deployments List -->
         <ul class="list-group mb-3 overflow-y-scroll" style="max-height: 600px; !important">
           <li class="list-group-item" v-for="deployment in app.deployments">
             <div class="d-flex justify-content-between align-items-center">
-              <strong>{{ deployment.git_branch }}/{{ deployment.git_commit }}</strong>
+              <div>
+                <strong class="me-1">{{ deployment.name }}</strong>
+                <span class="text-secondary">{{ deployment.time }}</span>
+              </div>
               <span class="badge fs-6 bg-success text-light">{{
                 deployment.status
               }}</span>
@@ -101,7 +114,9 @@ onMounted(async () => {
         <button class="btn btn-primary me-3" type="button" @click="deployCommitModalRef?.show(app.id)">
           Deploy Commit
         </button>
-        <button class="btn btn-warning me-3" type="button">Update Env</button>
+        <button class="btn btn-warning me-3" type="button" @click="updateEnvModalRef?.show(app.id, app.env)">
+          Update Env
+        </button>
         <button class="btn btn-danger" type="button" @click="deleteApp(app.id)">
           Delete
         </button>
