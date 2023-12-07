@@ -154,7 +154,7 @@ func main() {
 		}
 
 		if deployment.Status != "Running" {
-			return c.Redirect("/runner#/deployment/" + deployment.Id + "/logs/build")
+			return c.Redirect("/runner/deployment/" + deployment.Id + "/logs/build")
 		}
 
 		err := proxy.Do(c, fmt.Sprintf("http://127.0.0.1:%s", *deployment.Port))
