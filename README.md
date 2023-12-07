@@ -9,8 +9,9 @@ Status: In early development
 ### Features
 - Web UI
   - [ ] Connect with git providers via OAuth
-  - [ ] Configure deployments
+  - [x] Configure deployments
   - [x] Show build/runtime logs
+- Github and Gitlab Webhook integration 
 - Fast builds using docker
 - Comes with ready to use build templates:
   - [x] NextJS
@@ -22,7 +23,7 @@ Status: In early development
 - [ ] SSH directly into container
 
 ### TODO
-- [ ] Make 'update env' work
+- [x] Make 'update env' work
 
 ### Stuff we dont care about for now
 - Scalability
@@ -34,9 +35,3 @@ Status: In early development
 
 ### Usage
 - Access the Web UI
-
-**Headless HTTP API Examples**:  
-`curl http://127.0.0.1:1337/runner/api/app -H "Content-Type: application/json" -d '{"git_url": "https://github.com/fipso/nextjs-standalone-example.git", "name": "test", "template_id": "nextjs", "env": ""}'`  
-  
-`curl http://127.0.0.1:1337/runner/api/app/zIMkEZvZgeyw/deploy -H "Content-Type: application/json" -d '{"branch": "main", "commit": "ef2b6e795558cb29d89c87016e930c5a1c1974f2"}'`  
-
