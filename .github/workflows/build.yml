@@ -17,16 +17,18 @@ jobs:
       - uses: oven-sh/setup-bun@v1
 
       - name: Install NodeJS dependencies
+        working-directory: www
         run: bun install
 
       - name: Build
+        working-directory: www
         run: bun run build
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v3.1.0
         with:
           name: dist
-          path: ./dist
+          path: ./www/dist
 
   backend:
     needs: frontend
