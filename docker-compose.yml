@@ -1,0 +1,6 @@
+version: '3.0'
+
+services:
+  runner:
+    image: ghcr.io/fipso/runner:dev
+    entrypoint: ./runner -domain test1.local -port 1337

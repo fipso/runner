@@ -7,4 +7,6 @@ WORKDIR /app
 ADD ./dist ./www/dist
 ADD ./runner .
 
+RUN chmod +x ./runner
+
 ENTRYPOINT ["./runner"]

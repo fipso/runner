@@ -3,8 +3,8 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import NewAppModal from "../components/NewAppModal.vue";
 
-const apps = ref([]);
-const info = ref(null);
+const apps = ref<any>([]);
+const info = ref<any>(null);
 
 const newAppModalRef = ref<InstanceType<typeof NewAppModal> | null>(null);
 
