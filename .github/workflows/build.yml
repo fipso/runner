@@ -17,11 +17,11 @@ jobs:
       - uses: oven-sh/setup-bun@v1
 
       - name: Install NodeJS dependencies
-        working-directory: www
+        working-directory: ./www
         run: bun install
 
       - name: Build
-        working-directory: www
+        working-directory: ./www
         run: bun run build
 
       - name: Upload a Build Artifact
