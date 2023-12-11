@@ -1,6 +1,6 @@
 # Runner
 
-![image](https://github.com/fipso/runner/assets/8930842/f701a8e2-1d33-40a0-b11a-102f2d6b64fc)
+![image](https://github.com/fipso/runner/assets/8930842/f6bf3655-ebd4-4640-abcd-3b59b465f87b)
 
 Zero config vercel like preview deployments using docker
 
@@ -22,9 +22,6 @@ Status: In early development
 - [x] Automatic SSL using Let's Encrypt ACME
 - [ ] SSH directly into container
 
-### TODO
-- [x] Make 'update env' work
-
 ### Stuff we dont care about for now
 - Scalability
   - This tool is only for preview deployments
@@ -34,4 +31,15 @@ Status: In early development
   - Docker containers provide no safety
 
 ### Usage
-- Access the Web UI
+- TODO: Add docker file
+
+### Dev Usage
+- Start dev backend:
+  - `go mod tidy`
+  - `go build`
+  - `sudo ./runner -domain site1.local -port 1337`
+- Start dev frontend
+ - `cd www`
+ - `bun install`
+ - `bun run dev`
+- Access the Web UI on :3000
