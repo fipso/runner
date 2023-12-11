@@ -35,11 +35,11 @@ Status: In early development
 
 ### Dev Usage
 - Start dev backend:
-  - `go mod tidy`
-  - `go build`
-  - `sudo ./runner -domain site1.local -port 1337`
+    - `go mod tidy`
+    - `go build`
+    - `sudo ./runner -domain site1.local -port 1337`
 - Start dev frontend
- - `cd www`
- - `bun install`
- - `bun run dev`
+    - `cd www`
+    - `bun install`
+    - `bun run dev`
 - Access the Web UI on :3000
