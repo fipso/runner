@@ -69,6 +69,11 @@ func writeConfig() {
 }
 
 func main() {
+	// Create confing file
+	if _, err := os.Stat("./apps.json"); os.IsNotExist(err) {
+		os.Create("./apps.json")
+	}
+
 	// Save config on exit
 	defer func() {
 		writeConfig()
