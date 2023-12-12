@@ -6,21 +6,25 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"sync"
 	"time"
 
 	cp "github.com/otiai10/copy"
+	"github.com/valyala/fasthttp"
 )
 
 type Deployment struct {
-	Id          string    `json:"id"`
-	Time        time.Time `json:"time"`
-	ContainerId *string   `json:"container_id"`
-	GitBranch   string    `json:"git_branch"`
-	GitCommit   string    `json:"git_commit"`
-	Status      string    `json:"status"`
-	Port        *string   `json:"port"`
-	BuildJob    *BuildJob `json:"build_job"`
-	App         *App      `json:"-"`
+	Id           string              `json:"id"`
+	Time         time.Time           `json:"time"`
+	ContainerId  *string             `json:"container_id"`
+	GitBranch    string              `json:"git_branch"`
+	GitCommit    string              `json:"git_commit"`
+	Status       string              `json:"status"`
+	Port         *string             `json:"port"`
+	BuildJob     *BuildJob           `json:"build_job"`
+	Requests     []*fasthttp.Request `json:"-"`
+	RequestsLock *sync.Mutex         `json:"-"`
+	App          *App                `json:"-"`
 }
 
 func (d Deployment) GetSlug() string {

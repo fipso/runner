@@ -56,6 +56,9 @@ var debug bool
 var port string
 var sslPort string
 
+// Amount of requests per deployment to keep in memory
+const REQUESTS_BUFFER_SIZE = 1000
+
 func writeConfig() {
 	data, err := json.MarshalIndent(apps, "", "  ")
 	if err != nil {
@@ -158,6 +161,13 @@ func main() {
 		if deployment.Status != "Running" {
 			return c.Redirect("/runner/deployment/" + deployment.Id + "/logs/build")
 		}
+
+		deployment.RequestsLock.Lock()
+		deployment.Requests = append(deployment.Requests, c.Request())
+		if len(deployment.Requests) > REQUESTS_BUFFER_SIZE {
+			deployment.Requests = deployment.Requests[len(deployment.Requests)-REQUESTS_BUFFER_SIZE:]
+		}
+		deployment.RequestsLock.Unlock()
 
 		err := proxy.Do(c, fmt.Sprintf("http://127.0.0.1:%s", *deployment.Port))
 		if err != nil {
@@ -361,6 +371,20 @@ func main() {
 			"success": true,
 		})
 
+	})
+
+	app.Get("/runner/api/deployment/:id/requests", func(c *fiber.Ctx) error {
+		id := c.Params("id", "")
+		if id == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid deployment id")
+		}
+
+		deployment := getDeploymentById(id)
+		if deployment == nil {
+			return fiber.NewError(fiber.StatusBadRequest, "Unkown deployment id")
+		}
+
+		return c.JSON(deployment.Requests)
 	})
 
 	app.Get("/runner/api/deployment/:id/logs/:logType", func(c *fiber.Ctx) error {
