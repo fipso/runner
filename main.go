@@ -69,11 +69,6 @@ func writeConfig() {
 }
 
 func main() {
-	// Create confing file
-	if _, err := os.Stat("./apps.json"); os.IsNotExist(err) {
-		os.Create("./apps.json")
-	}
-
 	// Save config on exit
 	defer func() {
 		writeConfig()
@@ -93,13 +88,15 @@ func main() {
 	}
 
 	// Load config
-	data, err := os.ReadFile("./apps.json")
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = json.Unmarshal(data, &apps)
-	if err != nil {
-		log.Fatal(err)
+	if _, err := os.Stat("./apps.json"); !os.IsNotExist(err) {
+		data, err := os.ReadFile("./apps.json")
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = json.Unmarshal(data, &apps)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Recreate pointer references for app and deployment
