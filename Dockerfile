@@ -4,6 +4,8 @@ RUN mkdir -p /app
 RUN mkdir -p /app/www
 WORKDIR /app
 
+ADD ./templates .
+
 ADD ./dist ./www/dist
 ADD ./runner .
 
