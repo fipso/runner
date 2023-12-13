@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
+	"sync"
 	"time"
 )
 
@@ -38,12 +40,13 @@ func (a *App) Deploy(gitBranch, gitCommit string) (deployment *Deployment, err e
 	// }
 	// a.TemplateId = ptr(templateId)
 	deployment = &Deployment{
-		Id:        makeId(),
-		Time:      time.Now(),
-		App:       a,
-		GitBranch: gitBranch,
-		GitCommit: gitCommit,
-		Status:    "Initializing Build",
+		Id:              makeId(),
+		Time:            time.Now(),
+		App:             a,
+		GitBranch:       gitBranch,
+		GitCommit:       gitCommit,
+		Status:          "Initializing Build",
+		RequestsLogLock: &sync.Mutex{},
 	}
 
 	buildJob := &BuildJob{
@@ -122,4 +125,12 @@ func (a *App) MarshalJSON() ([]byte, error) {
 		Alias:      (*Alias)(a),
 		WebhookUrl: a.GetWebhookUrl(),
 	})
+}
+
+func (a *App) GetSlug() string {
+	slug := a.Name
+	slug = strings.ToLower(slug)
+	slug = strings.ReplaceAll(slug, " ", "-")
+
+	return slug
 }

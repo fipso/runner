@@ -77,18 +77,18 @@ const onBuildDone = (status: string) => {
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Deploy commit</h5>
+          <h5 class="modal-title">Manual Deployment</h5>
           <button type="button" class="btn-close" @click="hide"></button>
         </div>
         <div class="modal-body">
           <form>
             <div class="mb-3">
               <label for="branch" class="form-label">Branch*</label>
-              <input type="text" class="form-control" id="branch" v-model="branch" />
+              <input type="text" class="form-control" id="branch" v-model="branch" placeholder="main" />
             </div>
             <div class="mb-3">
-              <label for="commit" class="form-label">Commit*</label>
-              <input type="text" class="form-control" id="commit" v-model="commit" />
+              <label for="commit" class="form-label">Full Commit Hash*</label>
+              <input type="text" class="form-control" id="commit" v-model="commit" placeholder="844c559bb4dc6aaccba5add2fbb93d669639fd91" />
             </div>
           </form>
 

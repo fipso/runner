@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-playground/webhooks/v6/github"
@@ -106,6 +107,7 @@ func main() {
 	for _, app := range apps {
 		for _, deployment := range app.Deployments {
 			deployment.App = app
+			deployment.RequestsLogLock = &sync.Mutex{}
 			if deployment.BuildJob != nil {
 				deployment.BuildJob.Deployment = deployment
 			}
@@ -162,17 +164,18 @@ func main() {
 			return c.Redirect("/runner/deployment/" + deployment.Id + "/logs/build")
 		}
 
-		deployment.RequestsLock.Lock()
-		deployment.Requests = append(deployment.Requests, c.Request())
-		if len(deployment.Requests) > REQUESTS_BUFFER_SIZE {
-			deployment.Requests = deployment.Requests[len(deployment.Requests)-REQUESTS_BUFFER_SIZE:]
-		}
-		deployment.RequestsLock.Unlock()
-
 		err := proxy.Do(c, fmt.Sprintf("http://127.0.0.1:%s", *deployment.Port))
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
+
+		resp := c.Response()
+		deployment.RequestsLogLock.Lock()
+		deployment.RequestsLog = append(
+			deployment.RequestsLog,
+			fmt.Sprintf("%s %s %d", c.Method(), c.Path(), resp.StatusCode()),
+		)
+		deployment.RequestsLogLock.Unlock()
 
 		return c.Next()
 	})
@@ -373,20 +376,6 @@ func main() {
 
 	})
 
-	app.Get("/runner/api/deployment/:id/requests", func(c *fiber.Ctx) error {
-		id := c.Params("id", "")
-		if id == "" {
-			return fiber.NewError(fiber.StatusBadRequest, "Invalid deployment id")
-		}
-
-		deployment := getDeploymentById(id)
-		if deployment == nil {
-			return fiber.NewError(fiber.StatusBadRequest, "Unkown deployment id")
-		}
-
-		return c.JSON(deployment.Requests)
-	})
-
 	app.Get("/runner/api/deployment/:id/logs/:logType", func(c *fiber.Ctx) error {
 		id := c.Params("id", "")
 		if id == "" {
@@ -394,9 +383,6 @@ func main() {
 		}
 
 		logType := c.Params("logType", "")
-		if logType != "build" && logType != "running" {
-			return fiber.NewError(fiber.StatusBadRequest, "Invalid log type")
-		}
 
 		deployment := getDeploymentById(id)
 		if deployment == nil {
@@ -410,17 +396,21 @@ func main() {
 		var err error
 		var logs string
 
-		if logType == "build" {
+		switch logType {
+		case "build":
 			logs, err = deployment.BuildJob.GetLogs()
 			if err != nil {
 				return fiber.NewError(fiber.StatusBadRequest, err.Error())
 			}
-		}
-		if logType == "running" {
+		case "running":
 			logs, err = deployment.GetLogs()
 			if err != nil {
 				return fiber.NewError(fiber.StatusBadRequest, err.Error())
 			}
+		case "requests":
+			logs = strings.Join(deployment.RequestsLog, "\n")
+		default:
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid log type")
 		}
 
 		var deploymentUrl string

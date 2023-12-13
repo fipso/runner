@@ -1,6 +1,9 @@
 <script lang="ts" setup>
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+
+import { statusColor } from "../util";
+
 import NewAppModal from "../components/NewAppModal.vue";
 
 const apps = ref<any>([]);
@@ -37,11 +40,30 @@ onMounted(async () => {
 
     <!-- App List -->
     <div class="row">
-      <div v-for="app in apps" class="col-3 card" style="cursor: pointer" @click="router.push(`/app/${app.id}`)">
+      <div v-for="app in apps" class="col-4 card" style="cursor: pointer" @click="router.push(`/app/${app.id}`)">
         <div class="card-body">
-          <h2 class="card-title m-0">{{ app.name }}</h2>
-          <span class="text-secondary mb-2 d-block">{{ info.templates[app.template_id].name }}</span>
-          <span v-if="app.deployments.length" class="badge bg-success">{{ app.deployments[app.deployments.length - 1].status }}</span>
+          <div class="mb-4 d-flex justify-content-between align-items-center">
+            <h2 class="card-title m-0">{{ app.name }}</h2>
+            <span class="text-secondary">{{
+              info.templates[app.template_id].name
+            }}</span>
+          </div>
+          <div v-if="app?.deployments?.length">
+            <span class="text-secondary">Latest Deployment</span>
+            <div class="d-flex justify-content-between align-items-center">
+              <span>
+                {{ app.deployments[app.deployments.length - 1].git_branch }}/{{
+                  app.deployments[
+                    app.deployments.length - 1
+                  ].git_commit.substring(0, 7)
+                }}
+              </span>
+
+              <span v-if="app?.deployments?.length" class="badge" :class="`bg-${statusColor(
+                app.deployments[app.deployments.length - 1].status,
+              )}`">{{ app.deployments[app.deployments.length - 1].status }}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -10,7 +10,7 @@ Status: In early development
 - Web UI
   - [ ] Connect with git providers via OAuth
   - [x] Configure deployments
-  - [x] Show build/runtime logs
+  - [x] Show build/runtime/request logs
 - Github and Gitlab Webhook integration 
 - Fast builds using docker
 - Comes with ready to use build templates:
