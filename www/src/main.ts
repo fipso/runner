@@ -5,6 +5,8 @@ import * as VueRouter from "vue-router";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap";
 
+import "bootstrap-icons/font/bootstrap-icons.css";
+
 import "./style.css";
 import App from "./App.vue";
 import Dashboard from "./pages/Dashboard.vue";
@@ -21,7 +23,7 @@ const routes = [
     component: AppPage,
   },
   {
-    path: "/deployment/:id/logs/:logType",
+    path: "/deployment/:id/logs",
     component: Logs,
   },
 ];

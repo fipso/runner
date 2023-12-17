@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-playground/webhooks/v6/github"
@@ -88,19 +89,22 @@ func main() {
 	}
 
 	// Load config
-	data, err := os.ReadFile("./apps.json")
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = json.Unmarshal(data, &apps)
-	if err != nil {
-		log.Fatal(err)
+	if _, err := os.Stat("./apps.json"); !os.IsNotExist(err) {
+		data, err := os.ReadFile("./apps.json")
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = json.Unmarshal(data, &apps)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Recreate pointer references for app and deployment
 	for _, app := range apps {
 		for _, deployment := range app.Deployments {
 			deployment.App = app
+			deployment.RequestsLogLock = &sync.Mutex{}
 			if deployment.BuildJob != nil {
 				deployment.BuildJob.Deployment = deployment
 			}
@@ -157,16 +161,26 @@ func main() {
 			return c.Redirect("/runner/deployment/" + deployment.Id + "/logs/build")
 		}
 
-		err := proxy.Do(c, fmt.Sprintf("http://127.0.0.1:%s", *deployment.Port))
+		// Rewrite request host
+		url := c.Request().URI()
+		url.SetHost(fmt.Sprintf("127.0.0.1:%s", *deployment.Port))
+
+		err := proxy.Do(c, url.String())
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
 
-		return c.Next()
-	})
+		resp := c.Response()
+		deployment.RequestsLogLock.Lock()
+		deployment.RequestsLog = append(
+			deployment.RequestsLog,
+			fmt.Sprintf("%s %s %d", c.Method(), c.Path(), resp.StatusCode()),
+		)
+		deployment.RequestsLogLock.Unlock()
+		//return c.Next()
 
-	// Serve Vue Frontend
-	app.Static("/runner", "./www/dist")
+		return nil
+	})
 
 	app.Get("/runner/api/info", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
@@ -217,13 +231,14 @@ func main() {
 		}
 
 		app := App{
-			Id:          makeId(),
-			Name:        body.Name,
-			TemplateId:  &body.TemplateId,
-			GitUrl:      body.GitUrl,
-			GitUsername: body.GitUsername,
-			GitPassword: body.GitPassword,
-			Env:         ptr(body.Env),
+			Id:            makeId(),
+			Name:          body.Name,
+			TemplateId:    &body.TemplateId,
+			GitUrl:        body.GitUrl,
+			GitUsername:   body.GitUsername,
+			GitPassword:   body.GitPassword,
+			Env:           ptr(body.Env),
+			WebhookSecret: makeId(),
 		}
 
 		apps = append(apps, &app)
@@ -368,9 +383,6 @@ func main() {
 		}
 
 		logType := c.Params("logType", "")
-		if logType != "build" && logType != "running" {
-			return fiber.NewError(fiber.StatusBadRequest, "Invalid log type")
-		}
 
 		deployment := getDeploymentById(id)
 		if deployment == nil {
@@ -384,17 +396,21 @@ func main() {
 		var err error
 		var logs string
 
-		if logType == "build" {
+		switch logType {
+		case "build":
 			logs, err = deployment.BuildJob.GetLogs()
 			if err != nil {
 				return fiber.NewError(fiber.StatusBadRequest, err.Error())
 			}
-		}
-		if logType == "running" {
+		case "running":
 			logs, err = deployment.GetLogs()
 			if err != nil {
 				return fiber.NewError(fiber.StatusBadRequest, err.Error())
 			}
+		case "requests":
+			logs = strings.Join(deployment.RequestsLog, "\n")
+		default:
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid log type")
 		}
 
 		var deploymentUrl string
@@ -408,8 +424,6 @@ func main() {
 		})
 	})
 
-	githubHook, _ := github.New(github.Options.Secret("secure"))
-	gitlabHook, _ := gitlab.New(gitlab.Options.Secret("secure"))
 	app.Post("/runner/api/app/:id/webhook/:provider", func(c *fiber.Ctx) error {
 		id := c.Params("id", "")
 		if id == "" {
@@ -433,6 +447,7 @@ func main() {
 
 		switch provider {
 		case "github":
+			githubHook, _ := github.New(github.Options.Secret(app.WebhookSecret))
 			payload, err := githubHook.Parse(&r, github.PushEvent)
 			if err != nil {
 				if err == github.ErrEventNotFound {
@@ -450,6 +465,7 @@ func main() {
 			}
 
 		case "gitlab":
+			gitlabHook, _ := gitlab.New(gitlab.Options.Secret(app.WebhookSecret))
 			payload, err := gitlabHook.Parse(&r, gitlab.PushEvents)
 			if err != nil {
 				if err == gitlab.ErrEventNotFound {
@@ -482,8 +498,11 @@ func main() {
 
 	})
 
+	// Serve Vue Frontend
+	app.Static("/runner", "./www/dist/")
+
 	app.Get("/runner/*", func(ctx *fiber.Ctx) error {
-		return ctx.SendFile("./www/dist/index.html", false)
+		return ctx.SendFile("./www/dist/index.html", true)
 	})
 
 	if ssl {

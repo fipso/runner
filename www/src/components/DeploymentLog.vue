@@ -1,10 +1,12 @@
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, defineProps } from "vue";
+import { onMounted, onUnmounted, ref, defineProps, toRefs, watch } from "vue";
 
 const props = defineProps<{
   deploymentId: string;
   logType: string;
 }>();
+
+const refs = toRefs(props);
 
 const emit = defineEmits(["buildDone"]);
 
@@ -48,12 +50,19 @@ onMounted(() => {
 onUnmounted(() => {
   clearInterval(logsInterval);
 });
+
+watch(
+  () => props.logType,
+  () => {
+    loadLogs();
+  },
+);
 </script>
 
 <template>
-  <div v-if="buildDone || deploymentUrl" class="alert alert-success">
-    <span v-if="props.logType == 'build' && buildDone">Deployment was built successfully</span>
-    <span v-if="props.logType == 'running' && deploymentUrl">Deployment successfully deployed to:
+  <div v-if="refs.logType.value != 'requests' && (buildDone || deploymentUrl)" class="alert alert-success">
+    <span v-if="refs.logType.value == 'build' && buildDone">Deployment was built successfully</span>
+    <span v-if="refs.logType.value == 'running' && deploymentUrl">Deployment successfully deployed to:
       <a :href="deploymentUrl" target="_blank">{{ deploymentUrl }}</a></span>
   </div>
   <pre>{{ logs }}</pre>

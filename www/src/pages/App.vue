@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import { RouterLink, useRoute } from "vue-router";
+import { RouterLink, useRoute, useRouter } from "vue-router";
+
+import { statusColor } from "../util";
+
 import DeployCommitModal from "../components/DeployCommitModal.vue";
 import UpdateEnvModal from "../components/UpdateEnvModal.vue";
 
 const route = useRoute();
+const router = useRouter();
 
 const app = ref<any>(null);
 
@@ -23,7 +27,8 @@ const deleteApp = async (id: string) => {
     return;
   }
   await fetch(`/runner/api/app/${id}`, { method: "DELETE" });
-  loadData();
+  //loadData();
+  router.push("/");
 };
 
 const deleteDeployment = async (id: string) => {
@@ -46,11 +51,6 @@ onMounted(async () => {
   <main v-if="app" class="container p-5">
     <RouterLink to="/">Back</RouterLink>
 
-    <!-- Top Row -->
-    <div class="row m-3">
-      <h1 class="col-2">{{ app.name }}</h1>
-    </div>
-
     <!-- Apps List -->
     <div class="card m-3">
       <h4 class="card-header">{{ app.name }}</h4>
@@ -66,31 +66,32 @@ onMounted(async () => {
             <option>github</option>
             <option>gitlab</option>
           </select>
+          <br />
+          <strong>Webhook Secret:</strong> {{ app.webhook_secret }}
         </p>
         <p class="card-text"></p>
         <!-- Deployments List -->
         <ul class="list-group mb-3 overflow-y-scroll" style="max-height: 600px; !important">
-          <li class="list-group-item" v-for="deployment in app.deployments">
+          <li class="list-group-item" v-for="deployment in app?.deployments">
             <div class="d-flex justify-content-between align-items-center">
               <div>
                 <strong class="me-1">{{ deployment.name }}</strong>
                 <span class="text-secondary">{{ deployment.time }}</span>
               </div>
-              <span class="badge fs-6 bg-success text-light">{{
-                deployment.status
+              <span class="badge fs-6 text-light" :class="`bg-${statusColor(deployment.status)}`">{{ deployment.status
               }}</span>
             </div>
-            <p class="m-0">
+            <p class="m-0 mb-2">
               Public URL:
               <a :href="deployment.url" target="_blank">{{ deployment.url }}</a>
+              <br />
+              Container ID: {{ deployment.container_id }}
             </p>
 
             <div class="d-flex justify-content-between align-items-center">
-              <p class="m-0">
-                Logs:
-                <RouterLink :to="`/deployment/${deployment.id}/logs/build`">Build</RouterLink>{{ " " }}
-                <RouterLink :to="`/deployment/${deployment.id}/logs/running`">Running</RouterLink>
-              </p>
+              <button class="btn btn-sm btn-outline-primary" @click="router.push(`/deployment/${deployment.id}/logs`)">
+                <i class="bi bi-list-columns-reverse"></i> Logs
+              </button>
               <div>
                 <!--
                 <button class="btn btn-warning btn-sm me-1" type="button">
@@ -98,7 +99,7 @@ onMounted(async () => {
                 </button>
                 -->
                 <button class="btn btn-danger btn-sm" type="button" @click="deleteDeployment(deployment.id)">
-                  Delete
+                  <i class="bi bi-trash3"></i> Delete
                 </button>
               </div>
             </div>
@@ -106,13 +107,13 @@ onMounted(async () => {
         </ul>
 
         <button class="btn btn-primary me-3" type="button" @click="deployCommitModalRef?.show(app.id)">
-          Deploy Commit
+          <i class="bi bi-box-seam"></i> Deploy Manually
         </button>
         <button class="btn btn-warning me-3" type="button" @click="updateEnvModalRef?.show(app.id, app.env)">
-          Update Env
+          <i class="bi bi-card-list"></i> Environment Vars
         </button>
         <button class="btn btn-danger" type="button" @click="deleteApp(app.id)">
-          Delete
+          <i class="bi bi-trash3"></i> Delete
         </button>
       </div>
     </div>

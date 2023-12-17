@@ -6,25 +6,28 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"sync"
 	"time"
 
 	cp "github.com/otiai10/copy"
 )
 
 type Deployment struct {
-	Id          string    `json:"id"`
-	Time        time.Time `json:"time"`
-	ContainerId *string   `json:"container_id"`
-	GitBranch   string    `json:"git_branch"`
-	GitCommit   string    `json:"git_commit"`
-	Status      string    `json:"status"`
-	Port        *string   `json:"port"`
-	BuildJob    *BuildJob `json:"build_job"`
-	App         *App      `json:"-"`
+	Id              string      `json:"id"`
+	Time            time.Time   `json:"time"`
+	ContainerId     *string     `json:"container_id"`
+	GitBranch       string      `json:"git_branch"`
+	GitCommit       string      `json:"git_commit"`
+	Status          string      `json:"status"`
+	Port            *string     `json:"port"`
+	BuildJob        *BuildJob   `json:"build_job"`
+	RequestsLog     []string    `json:"-"`
+	RequestsLogLock *sync.Mutex `json:"-"`
+	App             *App        `json:"-"`
 }
 
 func (d Deployment) GetSlug() string {
-	return fmt.Sprintf("%s-%s-%s", d.App.Name, d.GitBranch, d.GitCommit)
+	return fmt.Sprintf("%s-%s-%s", d.App.GetSlug(), d.GitBranch, d.GitCommit[:7])
 }
 
 func (d Deployment) GetDomain() string {
