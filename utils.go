@@ -28,16 +28,17 @@ func loadTemplates() {
 		log.Fatal(err)
 	}
 
-	var config TemplateConfig
 	for _, template := range matches {
+		var config TemplateConfig
+
 		_, err := toml.DecodeFile(template, &config)
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
 
-	configKey := strings.TrimSuffix(filepath.Base(matches[0]), ".toml")
-	deploymentTemplates[configKey] = config
+		configKey := strings.TrimSuffix(filepath.Base(template), ".toml")
+		deploymentTemplates[configKey] = config
+	}
 }
 
 func findTemplateByDependencies(deps map[string]string) (string, error) {
