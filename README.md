@@ -43,6 +43,8 @@ Status: Alpha ~ Should work
     - `go mod tidy`
     - `go build`
     - `sudo ./runner -domain site1.local -port 1337`
+    - For air users (scuffed run as root workarround):
+        - `SUDO_PW=<your sudo pw> air`
 - Start dev frontend
     - `cd www`
     - `bun install`

@@ -161,7 +161,11 @@ func main() {
 			return c.Redirect("/runner/deployment/" + deployment.Id + "/logs/build")
 		}
 
-		err := proxy.Do(c, fmt.Sprintf("http://127.0.0.1:%s", *deployment.Port))
+		// Rewrite request host
+		url := c.Request().URI()
+		url.SetHost(fmt.Sprintf("127.0.0.1:%s", *deployment.Port))
+
+		err := proxy.Do(c, url.String())
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
@@ -173,12 +177,10 @@ func main() {
 			fmt.Sprintf("%s %s %d", c.Method(), c.Path(), resp.StatusCode()),
 		)
 		deployment.RequestsLogLock.Unlock()
+		//return c.Next()
 
-		return c.Next()
+		return nil
 	})
-
-	// Serve Vue Frontend
-	app.Static("/runner", "./www/dist")
 
 	app.Get("/runner/api/info", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
@@ -496,8 +498,11 @@ func main() {
 
 	})
 
+	// Serve Vue Frontend
+	app.Static("/runner", "./www/dist/")
+
 	app.Get("/runner/*", func(ctx *fiber.Ctx) error {
-		return ctx.SendFile("./www/dist/index.html", false)
+		return ctx.SendFile("./www/dist/index.html", true)
 	})
 
 	if ssl {
