@@ -10,15 +10,16 @@ import (
 )
 
 type App struct {
-	Id          string        `json:"id"`
-	Name        string        `json:"name"`
-	Port        *string       `json:"port"`
-	Env         *string       `json:"env"`
-	GitUrl      string        `json:"git_url"`
-	GitUsername *string       `json:"git_username"`
-	GitPassword *string       `json:"git_password"`
-	TemplateId  *string       `json:"template_id"`
-	Deployments []*Deployment `json:"deployments"`
+	Id            string        `json:"id"`
+	Name          string        `json:"name"`
+	Port          *string       `json:"port"`
+	Env           *string       `json:"env"`
+	GitUrl        string        `json:"git_url"`
+	GitUsername   *string       `json:"git_username"`
+	GitPassword   *string       `json:"git_password"`
+	TemplateId    *string       `json:"template_id"`
+	Deployments   []*Deployment `json:"deployments"`
+	WebhookSecret string        `json:"webhook_secret"`
 }
 
 func (a *App) Deploy(gitBranch, gitCommit string) (deployment *Deployment, err error) {

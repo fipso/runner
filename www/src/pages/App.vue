@@ -27,7 +27,8 @@ const deleteApp = async (id: string) => {
     return;
   }
   await fetch(`/runner/api/app/${id}`, { method: "DELETE" });
-  loadData();
+  //loadData();
+  router.push("/");
 };
 
 const deleteDeployment = async (id: string) => {
@@ -65,6 +66,8 @@ onMounted(async () => {
             <option>github</option>
             <option>gitlab</option>
           </select>
+          <br />
+          <strong>Webhook Secret:</strong> {{ app.webhook_secret }}
         </p>
         <p class="card-text"></p>
         <!-- Deployments List -->

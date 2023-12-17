@@ -57,9 +57,6 @@ var debug bool
 var port string
 var sslPort string
 
-// Amount of requests per deployment to keep in memory
-const REQUESTS_BUFFER_SIZE = 1000
-
 func writeConfig() {
 	data, err := json.MarshalIndent(apps, "", "  ")
 	if err != nil {
@@ -232,13 +229,14 @@ func main() {
 		}
 
 		app := App{
-			Id:          makeId(),
-			Name:        body.Name,
-			TemplateId:  &body.TemplateId,
-			GitUrl:      body.GitUrl,
-			GitUsername: body.GitUsername,
-			GitPassword: body.GitPassword,
-			Env:         ptr(body.Env),
+			Id:            makeId(),
+			Name:          body.Name,
+			TemplateId:    &body.TemplateId,
+			GitUrl:        body.GitUrl,
+			GitUsername:   body.GitUsername,
+			GitPassword:   body.GitPassword,
+			Env:           ptr(body.Env),
+			WebhookSecret: makeId(),
 		}
 
 		apps = append(apps, &app)
@@ -424,8 +422,6 @@ func main() {
 		})
 	})
 
-	githubHook, _ := github.New(github.Options.Secret("secure"))
-	gitlabHook, _ := gitlab.New(gitlab.Options.Secret("secure"))
 	app.Post("/runner/api/app/:id/webhook/:provider", func(c *fiber.Ctx) error {
 		id := c.Params("id", "")
 		if id == "" {
@@ -449,6 +445,7 @@ func main() {
 
 		switch provider {
 		case "github":
+			githubHook, _ := github.New(github.Options.Secret(app.WebhookSecret))
 			payload, err := githubHook.Parse(&r, github.PushEvent)
 			if err != nil {
 				if err == github.ErrEventNotFound {
@@ -466,6 +463,7 @@ func main() {
 			}
 
 		case "gitlab":
+			gitlabHook, _ := gitlab.New(gitlab.Options.Secret(app.WebhookSecret))
 			payload, err := gitlabHook.Parse(&r, gitlab.PushEvents)
 			if err != nil {
 				if err == gitlab.ErrEventNotFound {

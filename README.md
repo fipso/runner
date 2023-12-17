@@ -1,17 +1,16 @@
 # Runner
 
-![image](https://github.com/fipso/runner/assets/8930842/f6bf3655-ebd4-4640-abcd-3b59b465f87b)
-
 Zero config vercel like preview deployments using docker
 
-Status: In early development
+Status: Alpha ~ Should work
 
 ### Features
 - Web UI
   - [ ] Connect with git providers via OAuth
-  - [x] Configure deployments
+  - [x] Add and configure deployments
   - [x] Show build/runtime/request logs
 - Github and Gitlab Webhook integration 
+  - [x] Handle push event
 - Fast builds using docker
 - Comes with ready to use build templates:
   - [x] NextJS
@@ -21,17 +20,23 @@ Status: In early development
 - [x] Templates are easy to modify using .toml files
 - [x] Automatic SSL using Let's Encrypt ACME
 - [ ] SSH directly into container
+- [ ] Detect package manager from package.json
+- [ ] Authentication
+- [ ] HTTP API
 
 ### Stuff we dont care about for now
 - Scalability
   - This tool is only for preview deployments
   - Prod maybe soon
 - Security
-  - Only deploy code you trust
-  - Docker containers provide no safety
+  - Only deploy code you trust as docker containers provide no safety
 
 ### Usage
-- TODO: Add docker file
+- Using docker:
+    - `docker run -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/fipso/runner:main`
+- Using a binary:
+    - Download a runner build artifact
+    - ./runner -d mydomain.com
 
 ### Dev Usage
 - Start dev backend:

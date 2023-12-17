@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import { ref } from "vue";
 import DeploymentLog from "../components/DeploymentLog.vue";
 
