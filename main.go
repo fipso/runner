@@ -508,35 +508,45 @@ func main() {
 	})
 
 	if ssl {
-		go func() {
-			// Certificate manager
-			m := &autocert.Manager{
-				Prompt: autocert.AcceptTOS,
-				// Replace with your domain
-				HostPolicy: func(_ context.Context, host string) error {
-					if matches := regexp.MustCompile(`^[^.]+\.` + domain + `$`).MatchString(host); !matches {
-						return errors.New(
-							"acme/autocert: host name does not match any domain given in SAN",
-						)
-					}
-					return nil
-				},
-				// Folder to store the certificates
-				Cache: autocert.DirCache("./certs"),
-			}
+		// Certificate manager
+		m := &autocert.Manager{
+			Prompt: autocert.AcceptTOS,
+			// Replace with your domain
+			HostPolicy: func(_ context.Context, host string) error {
+				if matches := regexp.MustCompile(`^[^.]+\.` + domain + `$`).MatchString(host); !matches {
+					return errors.New(
+						"acme/autocert: host name does not match any domain given in SAN",
+					)
+				}
+				return nil
+			},
+			// Folder to store the certificates
+			Cache: autocert.DirCache("./certs"),
+		}
 
-			// TLS Config
-			cfg := &tls.Config{
-				// Get Certificate from Let's Encrypt
-				GetCertificate: m.GetCertificate,
-				// By default NextProtos contains the "h2"
-				// This has to be removed since Fasthttp does not support HTTP/2
-				// Or it will cause a flood of PRI method logs
-				// http://webconcepts.info/concepts/http-method/PRI
-				NextProtos: []string{
-					"http/1.1", "acme-tls/1",
-				},
-			}
+		// TLS Config
+		cfg := &tls.Config{
+			// Get Certificate from Let's Encrypt
+			GetCertificate: m.GetCertificate,
+			// By default NextProtos contains the "h2"
+			// This has to be removed since Fasthttp does not support HTTP/2
+			// Or it will cause a flood of PRI method logs
+			// http://webconcepts.info/concepts/http-method/PRI
+			NextProtos: []string{
+				"http/1.1", "acme-tls/1",
+			},
+			InsecureSkipVerify: true,
+		}
+
+                // Register acme challenge handler on http server
+		app.Get("/.well-known/acme-challenge/", func(c *fiber.Ctx) error {
+			handler := fasthttpadaptor.NewFastHTTPHandler(m.HTTPHandler(nil))
+                        handler(c.Context())
+
+                        return nil
+		})
+
+		go func() {
 			ln, err := tls.Listen("tcp", fmt.Sprintf(":%s", sslPort), cfg)
 			if err != nil {
 				panic(err)
