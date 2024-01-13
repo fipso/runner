@@ -2,13 +2,16 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -81,7 +84,6 @@ func main() {
 	flag.BoolVar(&debug, "debug", false, "Enable debug mode")
 	flag.StringVar(&port, "port", "80", "Port for HTTP")
 	flag.StringVar(&sslPort, "ssl-port", "443", "Port for HTTPS")
-
 	flag.Parse()
 
 	if domain == "" {
@@ -511,7 +513,14 @@ func main() {
 			m := &autocert.Manager{
 				Prompt: autocert.AcceptTOS,
 				// Replace with your domain
-				HostPolicy: autocert.HostWhitelist(fmt.Sprintf("*.%s", domain)),
+				HostPolicy: func(_ context.Context, host string) error {
+					if matches := regexp.MustCompile(`^[^.]+\.` + domain + `$`).MatchString(host); !matches {
+						return errors.New(
+							"acme/autocert: host name does not match any domain given in SAN",
+						)
+					}
+					return nil
+				},
 				// Folder to store the certificates
 				Cache: autocert.DirCache("./certs"),
 			}
