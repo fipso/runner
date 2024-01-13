@@ -146,44 +146,6 @@ func main() {
 		},
 	)
 
-	app.Use(func(c *fiber.Ctx) error {
-		// Skip Frontend and API routes
-		if bytes.HasPrefix(c.Request().URI().Path(), []byte("/runner")) {
-			return c.Next()
-		}
-
-		// Find deployment by domain
-		deployment := getDeploymentByDomain(strings.Split(c.Hostname(), ":")[0]) // Remove port
-		if deployment == nil {
-			return c.Redirect("/runner")
-			//return fiber.NewError(fiber.StatusNotFound, "Deployment not found")
-		}
-
-		if deployment.Status != "Running" {
-			return c.Redirect("/runner/deployment/" + deployment.Id + "/logs/build")
-		}
-
-		// Rewrite request host
-		url := c.Request().URI()
-		url.SetHost(fmt.Sprintf("127.0.0.1:%s", *deployment.Port))
-
-		err := proxy.Do(c, url.String())
-		if err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-		}
-
-		resp := c.Response()
-		deployment.RequestsLogLock.Lock()
-		deployment.RequestsLog = append(
-			deployment.RequestsLog,
-			fmt.Sprintf("%s %s %d", c.Method(), c.Path(), resp.StatusCode()),
-		)
-		deployment.RequestsLogLock.Unlock()
-		//return c.Next()
-
-		return nil
-	})
-
 	app.Get("/runner/api/info", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"templates": deploymentTemplates,
@@ -507,12 +469,59 @@ func main() {
 		return ctx.SendFile("./www/dist/index.html", true)
 	})
 
+	app.Use(func(c *fiber.Ctx) error {
+		// Skip acme
+		if bytes.HasPrefix(c.Request().URI().Path(), []byte("/.well-known/acme-challenge")) {
+			return c.Next()
+		}
+
+		// Skip Frontend and API routes
+		if bytes.HasPrefix(c.Request().URI().Path(), []byte("/runner")) {
+			return c.Next()
+		}
+
+		// Find deployment by domain
+		deployment := getDeploymentByDomain(strings.Split(c.Hostname(), ":")[0]) // Remove port
+		if deployment == nil {
+			return c.Redirect("/runner")
+			//return fiber.NewError(fiber.StatusNotFound, "Deployment not found")
+		}
+
+		if deployment.Status != "Running" {
+			return c.Redirect("/runner/deployment/" + deployment.Id + "/logs/build")
+		}
+
+		// Rewrite request host
+		url := c.Request().URI()
+		url.SetHost(fmt.Sprintf("127.0.0.1:%s", *deployment.Port))
+
+		err := proxy.Do(c, url.String())
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		}
+
+		resp := c.Response()
+		deployment.RequestsLogLock.Lock()
+		deployment.RequestsLog = append(
+			deployment.RequestsLog,
+			fmt.Sprintf("%s %s %d", c.Method(), c.Path(), resp.StatusCode()),
+		)
+		deployment.RequestsLogLock.Unlock()
+		//return c.Next()
+
+		return nil
+	})
+
 	if ssl {
 		// Certificate manager
 		m := &autocert.Manager{
 			Prompt: autocert.AcceptTOS,
 			// Replace with your domain
 			HostPolicy: func(_ context.Context, host string) error {
+				if host == domain {
+					return nil
+				}
+
 				if matches := regexp.MustCompile(`^[^.]+\.` + domain + `$`).MatchString(host); !matches {
 					return errors.New(
 						"acme/autocert: host name does not match any domain given in SAN",
@@ -535,15 +544,14 @@ func main() {
 			NextProtos: []string{
 				"http/1.1", "acme-tls/1",
 			},
-			InsecureSkipVerify: true,
 		}
 
-                // Register acme challenge handler on http server
-		app.Get("/.well-known/acme-challenge/", func(c *fiber.Ctx) error {
+		// Register acme challenge handler on http server
+		app.Get("/.well-known/acme-challenge/*", func(c *fiber.Ctx) error {
 			handler := fasthttpadaptor.NewFastHTTPHandler(m.HTTPHandler(nil))
-                        handler(c.Context())
+			handler(c.Context())
 
-                        return nil
+			return nil
 		})
 
 		go func() {
