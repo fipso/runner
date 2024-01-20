@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"net"
+	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -60,7 +62,19 @@ func dockerRun(
 		containerConfig.Env = strings.Split(*env, "\n")
 	}
 
-	mountPathAbs, err := filepath.Abs(mountPath)
+	var mountPathAbs string
+
+	// Handle docker in docker mode
+	hostMountPath := os.Getenv("DOCKER_HOST_MOUNT_PATH")
+	if hostMountPath != "" {
+              mountPathAbs = path.Join(hostMountPath, mountPath)
+	} else {
+		mountPathAbs, err = filepath.Abs(mountPath)
+		if err != nil {
+			return "", err
+
+		}
+	}
 
 	hostConfig := container.HostConfig{
 		// Resources: container.Resources{
@@ -104,7 +118,7 @@ func dockerRun(
 		return "", err
 	}
 
-        log.Println("[Docker] New container with id:", resp.ID)
+	log.Println("[Docker] New container with id:", resp.ID)
 
 	// Start container
 	err = docker.ContainerStart(context.Background(), resp.ID, types.ContainerStartOptions{})
@@ -119,7 +133,7 @@ func dockerLogs(id string) (string, error) {
 	reader, err := docker.ContainerLogs(
 		context.Background(),
 		id,
-                types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Timestamps: true},
+		types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Timestamps: true},
 	)
 	if err != nil {
 		return "", err

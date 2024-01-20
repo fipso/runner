@@ -488,7 +488,7 @@ func main() {
 		}
 
 		if deployment.Status != "Running" {
-			return c.Redirect("/runner/deployment/" + deployment.Id + "/logs/build")
+			return c.Redirect("/runner/deployment/" + deployment.Id + "/logs?logType=build")
 		}
 
 		// Rewrite request host
