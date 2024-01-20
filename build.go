@@ -42,7 +42,7 @@ func (b *BuildJob) Run() (err error) {
 	if err != nil {
 		return
 	}
-	defer os.RemoveAll(buildDir)
+	//defer os.RemoveAll(buildDir)
 
 	// Clone src into buildDir
 	err = b.cloneRepo(buildDir)
