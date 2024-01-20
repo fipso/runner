@@ -127,9 +127,6 @@ func main() {
 	if err := createDirIfNotExists("./mounts/running"); err != nil {
 		log.Fatal(err)
 	}
-	if err := createDirIfNotExists("./repos"); err != nil {
-		log.Fatal(err)
-	}
 	if err := createDirIfNotExists("./artifacts"); err != nil {
 		log.Fatal(err)
 	}
@@ -470,6 +467,11 @@ func main() {
 	})
 
 	app.Use(func(c *fiber.Ctx) error {
+		// Skip main domain
+		if c.Hostname() == domain {
+			return c.Next()
+		}
+
 		// Skip acme
 		if bytes.HasPrefix(c.Request().URI().Path(), []byte("/.well-known/acme-challenge")) {
 			return c.Next()
@@ -483,8 +485,7 @@ func main() {
 		// Find deployment by domain
 		deployment := getDeploymentByDomain(strings.Split(c.Hostname(), ":")[0]) // Remove port
 		if deployment == nil {
-			return c.Redirect("/runner")
-			//return fiber.NewError(fiber.StatusNotFound, "Deployment not found")
+			return fiber.NewError(fiber.StatusNotFound, "Deployment not found")
 		}
 
 		if deployment.Status != "Running" {
@@ -493,6 +494,8 @@ func main() {
 
 		// Rewrite request host
 		url := c.Request().URI()
+		// Always downgrade to http
+		url.SetScheme("http")
 		url.SetHost(fmt.Sprintf("127.0.0.1:%s", *deployment.Port))
 
 		err := proxy.Do(c, url.String())
