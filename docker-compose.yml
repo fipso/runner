@@ -2,5 +2,13 @@ version: '3.0'
 
 services:
   runner:
-    image: ghcr.io/fipso/runner:dev
-    entrypoint: ./runner -domain test1.local -port 1337
+    image: ghcr.io/fipso/runner:main
+    environment:
+      - "DOCKER_HOST_MOUNT_PATH=${PWD}/runner"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "${PWD}/runner/mounts:/app/mounts"
+      - "${PWD}/runner/artifacts:/app/artifacts"
+      - "${PWD}/runner/certs:/app/certs"
+    network_mode: host
+    command: "-domain <your-domain.com> -ssl"
