@@ -467,9 +467,9 @@ func main() {
 	})
 
 	app.Use(func(c *fiber.Ctx) error {
-		// Skip main domain
-		if c.Hostname() == domain {
-			return c.Next()
+		// Redirect to control panel
+		if c.Hostname() == domain && bytes.Equal(c.Request().URI().Path(), []byte("/")) {
+			return c.Redirect("/runner/")
 		}
 
 		// Skip acme
