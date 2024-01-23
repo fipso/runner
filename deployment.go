@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -104,9 +105,11 @@ func (d *Deployment) Run() (err error) {
 	}
 
 	// Write run script into container
+	script := strings.ReplaceAll(template.Run.Script, "%pm%", d.App.PackageManager)
+
 	runScript := fmt.Sprintf(
 		"#!/bin/sh\n\ncd /runner/\n\n%s",
-		template.Run.Script,
+		script,
 	)
 	err = os.WriteFile(path.Join(workDir, "r_run.sh"), []byte(runScript), 0755)
 

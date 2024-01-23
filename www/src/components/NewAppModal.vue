@@ -8,6 +8,7 @@ const appGitUrl = ref<string>("");
 const appGitUsername = ref<string>("");
 const appGitPassword = ref<string>("");
 const appEnv = ref<string>("");
+const appPackageManager = ref<string>("npm");
 
 const loading = ref(false);
 const modalRef = ref<HTMLElement | null>();
@@ -33,7 +34,7 @@ const hide = () => {
 };
 
 const onSubmit = async () => {
-  if (!appName.value || !appTemplate.value || !appGitUrl.value) {
+  if (!appName.value || !appTemplate.value || !appGitUrl.value || !appPackageManager.value) {
     alert("Please fill out all required fields");
     return;
   }
@@ -52,6 +53,7 @@ const onSubmit = async () => {
         git_username: appGitUsername.value,
         git_password: appGitPassword.value,
         env: appEnv.value,
+        packageManager: appPackageManager.value,
       }),
     });
 
@@ -102,6 +104,14 @@ const onSubmit = async () => {
                   <span>{{ props.templates[appTemplate].info }}</span>
                 </div>
               </div>
+            </div>
+            <div class="mb-3">
+              <label for="appPackageManager" class="form-label">Package Manager*</label>
+              <select v-model="appPackageManager" class="form-select" id="appPackageManager">
+                <option value="npm" selected>npm</option>
+                <option value="yarn" disabled>yarn</option>
+                <option value="pnpm" disabled>pnpm</option>
+              </select>
             </div>
             <div class="mb-3">
               <label for="appGitUrl" class="form-label">Git URL*</label>
