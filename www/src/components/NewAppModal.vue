@@ -109,8 +109,8 @@ const onSubmit = async () => {
               <label for="appPackageManager" class="form-label">Package Manager*</label>
               <select v-model="appPackageManager" class="form-select" id="appPackageManager">
                 <option value="npm" selected>npm</option>
-                <option value="yarn" disabled>yarn</option>
-                <option value="pnpm" disabled>pnpm</option>
+                <option value="yarn">yarn</option>
+                <option value="pnpm">pnpm</option>
               </select>
             </div>
             <div class="mb-3">
