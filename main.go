@@ -175,12 +175,13 @@ func main() {
 
 	app.Post("/runner/api/app", func(c *fiber.Ctx) error {
 		var body struct {
-			Name        string  `json:"name"`
-			TemplateId  string  `json:"template_id"`
-			GitUrl      string  `json:"git_url"`
-			GitUsername *string `json:"git_username,omitempty"`
-			GitPassword *string `json:"git_password,omitempty"`
-			Env         string  `json:"env"`
+			Name           string  `json:"name"`
+			TemplateId     string  `json:"template_id"`
+			GitUrl         string  `json:"git_url"`
+			GitUsername    *string `json:"git_username,omitempty"`
+			GitPassword    *string `json:"git_password,omitempty"`
+			Env            string  `json:"env"`
+			PackageManager string  `json:"package_manager"`
 		}
 
 		if err := c.BodyParser(&body); err != nil {
@@ -192,14 +193,15 @@ func main() {
 		}
 
 		app := App{
-			Id:            makeId(),
-			Name:          body.Name,
-			TemplateId:    &body.TemplateId,
-			GitUrl:        body.GitUrl,
-			GitUsername:   body.GitUsername,
-			GitPassword:   body.GitPassword,
-			Env:           ptr(body.Env),
-			WebhookSecret: makeId(),
+			Id:             makeId(),
+			Name:           body.Name,
+			TemplateId:     &body.TemplateId,
+			GitUrl:         body.GitUrl,
+			GitUsername:    body.GitUsername,
+			GitPassword:    body.GitPassword,
+			Env:            ptr(body.Env),
+			WebhookSecret:  makeId(),
+			PackageManager: body.PackageManager,
 		}
 
 		apps = append(apps, &app)

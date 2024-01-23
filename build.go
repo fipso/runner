@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/go-git/go-git/v5"
@@ -53,9 +54,11 @@ func (b *BuildJob) Run() (err error) {
 	template := deploymentTemplates[*b.Deployment.App.TemplateId]
 
 	// Write build script into container
+	script := strings.ReplaceAll(template.Build.Script, "%pm%", b.Deployment.App.PackageManager)
+
 	buildScript := fmt.Sprintf(
 		"#!/bin/sh\n\ncd /runner/\n\n%s",
-		template.Build.Script,
+		script,
 	)
 	err = os.WriteFile(path.Join(buildDir, "r_build.sh"), []byte(buildScript), 0755)
 

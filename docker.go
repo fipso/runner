@@ -44,7 +44,6 @@ func dockerRun(
 	)
 	if err != nil {
 		return "", err
-
 	}
 	// defer reader.Close()
 	// // Read docker pull logs

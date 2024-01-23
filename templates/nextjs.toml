@@ -5,8 +5,8 @@ info = "Please make sure you are using output: 'standalone' in your next.config.
 [build]
 image = "node:lts-alpine3.17"
 script = """
-corepack pnpm install
-corepack pnpm run build
+corepack %pm% install
+corepack %pm% run build
 
 cp -r ./public ./.next/standalone/public
 """
