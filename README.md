@@ -34,11 +34,13 @@ Status: Alpha ~ Should work
   - Only deploy code you trust as docker containers provide no safety
 
 ### Usage
-- Using docker:
-    - `docker run -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/fipso/runner:main`
+- Using docker in docker:
+    - `curl -O "https://raw.githubusercontent.com/fipso/runner/main/docker-compose.yml"`
+    - Edit file and update domain
+    - `sudo docker-compose up -d`
 - Using a binary:
     - Download a runner build artifact
-    - ./runner -d mydomain.com
+    - `./runner -domain mydomain.com -ssl`
 
 ### Dev Usage
 - Start dev backend:
